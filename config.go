@@ -27,36 +27,77 @@ import (
 	"bufio"
 	"strings"
 	"unicode"
+	"errors"
+	"fmt"
 )
 
 type Config struct {
 	m map[string]string
 }
 
-func Read(r io.Reader) (*Config, error) {
-	m := make(map[string]string)
-	buf := bufio.NewReader(r)
-	scope := ""
+func isComment(line string) bool {
+	return strings.HasPrefix(line, "#")
+}
+
+func isEmpty(line string) bool {
+	return line == ""
+}
+
+func isKeyValue(line string) bool {
+	return strings.ContainsRune(line, '=') && len(line) >= 3
+}
+
+func parseKeyValue(line string) (key, value string) {
+	strs := strings.SplitN(line, "=", 2)
+	key, value = strings.TrimRightFunc(strs[0], unicode.IsSpace), strings.TrimLeftFunc(strs[1], unicode.IsSpace)
+	return
+}
+
+func isName(line string) bool {
+	return strings.HasSuffix(line, ":") && len(line) >= 2
+}
+
+func parseName(line string) string {
+	return strings.TrimRightFunc(line, func(r rune) bool {
+		return ':' == r || unicode.IsSpace(r)
+	})
+}
+
+func Read(r io.Reader) (map[string]*Config, error) {
+	var m = make(map[string]*Config)
+	var cfg = &Config{
+		m: make(map[string]string),
+	}
+	m[""] = cfg
+
+	var buf = bufio.NewReader(r)
+	var lnum uint = 0
 	for {
-		line, err := buf.ReadString('\n')
+		var line, err = buf.ReadString('\n')
 		if err != nil && err != io.EOF {
 			return nil, err
 		}
-		if strings.HasPrefix(strings.TrimLeftFunc(line, unicode.IsSpace),"#") {
-			// line is a comment
-		} else if strings.ContainsRune(line, '=') {
-			// key+value
-			strs := strings.SplitN(line, "=", 2)
-			key, val := strings.TrimSpace(strs[0]), strings.TrimSpace(strs[1])
-			m[key] = val
-		} else if strings.TrimSpace(line) == "" {
-			// empty line
+		lnum = lnum + 1
+		line = strings.TrimSpace(line)
+		if isComment(line) || isEmpty(line) {
+			// ignore
+		} else if isKeyValue(line) {
+			var key, value = parseKeyValue(line)
+			cfg.m[key] = value
+		} else if isName(line) {
+			var name = parseName(line)
+			if _, prs := m[name]; !prs {
+				m[name] = &Config{
+					m: make(map[string]string),
+				}
+			}
+			cfg = m[name]
 		} else {
-			// scope
+			return nil, errors.New(fmt.Sprintf("Unrecognized input at line %d: %s", lnum, line))
 		}
 		if err != nil && err == io.EOF {
 			break
 		}
 	}
-	return &Config{m: m}, nil
+	return m, nil
 }
