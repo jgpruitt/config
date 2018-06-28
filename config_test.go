@@ -3,6 +3,7 @@ package config
 import (
 	"testing"
 	"strings"
+	"fmt"
 )
 
 func TestIsComment(t *testing.T) {
@@ -54,33 +55,35 @@ func TestIsKeyValue(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		if isKeyValue(test.in) != test.out {
-			t.Errorf(`Expected %v for input %q but got %v`, test.out, test.in, !test.out)
-		}
+		t.Run(test.in, func(t *testing.T) {
+			if isKeyValue(test.in) != test.out {
+				t.Errorf(`Expected %v for input %#v but got %v`, test.out, test.in, !test.out)
+			}
+		})
 	}
 }
 
 func TestParseKeyValue(t *testing.T) {
 	var tests = []struct{
+		in  string
 		key string
 		val string
 	}{
-		{"a", "b"},
-		{"foo", "bar"},
-		{"123", "456"},
-		{"@#$!%^", "a b c d e"},
-		{"true", "false"},
+		{"a=b", "a", "b"},
+		{"foo=bar", "foo", "bar"},
+		{"123=456", "123", "456"},
+		{"@#$!%^=a b c d e", "@#$!%^", "a b c d e"},
+		{"true = false", "true", "false"},
+		{"x = y", "x", "y"},
 	}
 
 	for _, test := range tests {
-		var key, val = parseKeyValue(test.key + "=" + test.val)
-		if key != test.key || val != test.val {
-			t.Errorf(`Expected key=%q and value=%q but got key=%q and value=%q`, test.key, test.val, key, val)
-		}
-	}
-	                                   
-	if key, val := parseKeyValue("a = b"); key != "a" || val != "b" {
-		t.Errorf(`Expected key="a" and value="b" but got key=%q and value=%q`, key, val)
+		t.Run(test.in, func(t *testing.T) {
+			var key, val = parseKeyValue(test.in)
+			if key != test.key || val != test.val {
+				t.Errorf(`Expected key=%#v and value=%#v but got key=%#v and value=%#v`, test.key, test.val, key, val)
+			}
+		})
 	}
 }
 
@@ -98,9 +101,11 @@ func TestIsName(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		if isName(test.in) != test.out {
-			t.Errorf(`Expected %v for input %q but got %v`, test.out, test.in, !test.out)
-		}
+		t.Run(fmt.Sprintf("%#v=%t", test.in, test.out), func(t *testing.T) {
+			if isName(test.in) != test.out {
+				t.Errorf(`Expected %v for input %q but got %v`, test.out, test.in, !test.out)
+			}
+		})
 	}
 }
 
@@ -116,10 +121,12 @@ func TestParseName(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		var out = parseName(test.in)
-		if out != test.out {
-			t.Errorf(`Expected %q for input %q but got %q`, test.out, test.in, out)
-		}
+		t.Run(fmt.Sprintf("%#v=%#v", test.in, test.out), func(t *testing.T) {
+			var out = parseName(test.in)
+			if out != test.out {
+				t.Errorf(`Expected %q for input %q but got %q`, test.out, test.in, out)
+			}
+		})
 	}
 }
 
@@ -132,10 +139,44 @@ zeta=gamma
 bravo=charlie
 	# this is also a comment
 
+foo:
+	123=456
+	cat = dog
+	bird = worm
+tooth= nail
+
+bar :
+	a=b
+	c= d
+			   f=g
+	baz:
+1+2=3
+
 `
-	_, err := Read(strings.NewReader(input))
+	cfgs, err := Read(strings.NewReader(input))
 	if err != nil {
-		t.Fail()
+		t.Errorf("Unexpected error: %s", err)
 		return
 	}
+	t.Run("len(cfg)=4", func(t *testing.T) {
+		if len(cfgs) != 4 {
+			t.Errorf("Expected 4 Configs but got %d", len(cfgs))
+		}
+	})
+	cfg, prs := cfgs[""]
+	t.Run(`cfgs[""]!=nil`, func(t *testing.T) {
+		if !prs {
+			t.Error("Missing the default config")
+		}
+	})
+	if prs {
+		t.Run(`alpha=beta`, func(t *testing.T) {
+			if val, prs := cfg.m["alpha"]; !prs {
+				t.Error(`Value for "alpha" was missing`)
+			} else if val != "beta" {
+				t.Errorf(`Expected "beta" but got %q`, val)
+			}
+		})
+	}
+
 }
