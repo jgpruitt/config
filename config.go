@@ -29,10 +29,165 @@ import (
 	"unicode"
 	"errors"
 	"fmt"
+	"strconv"
+	"math"
+	"time"
+	"net/url"
+	"path/filepath"
+	"net"
 )
+
+var KeyNotFoundError = errors.New("key not found")
+var ValueParseError = errors.New("failed to parse value into given type")
 
 type Config struct {
 	m map[string]string
+}
+
+func (c *Config) String(key string) (val string, err error) {
+	if val, ok := c.m[key]; !ok {
+		return "", KeyNotFoundError
+	} else {
+		return val, nil
+	}
+}
+
+func (c *Config) StringOrDefault(key string, def string) (val string, used bool) {
+	if val, err := c.String(key); err != nil {
+		return def, true
+	} else {
+		return val, false
+	}
+}
+
+func (c *Config) Bool(key string) (val bool, err error) {
+	if val, err := c.String(key); err != nil {
+		return false, err
+	} else {
+		return strconv.ParseBool(val)
+	}
+}
+
+func (c *Config) BoolOrDefault(key string, def bool) (val bool, used bool) {
+	if val, err := c.Bool(key); err != nil {
+		return def, true
+	} else {
+		return val, false
+	}
+}
+
+func (c *Config) Float64(key string) (val float64, err error) {
+	if val, err := c.String(key); err != nil {
+		return math.NaN(), err
+	} else {
+		return strconv.ParseFloat(val, 64)
+	}
+}
+
+func (c *Config) Float64OrDefault(key string, def float64) (val float64, used bool) {
+	if val, err := c.Float64(key); err != nil {
+		return def, true
+	} else {
+		return val, false
+	}
+}
+
+func (c *Config) Int64(key string) (val int64, err error) {
+	if str, err := c.String(key); err != nil {
+		return 0, err
+	} else {
+		return strconv.ParseInt(str, 10, 64)
+	}
+}
+
+func (c *Config) Int64OrDefault(key string, def int64) (val int64, used bool) {
+	if val, err := c.Int64(key); err != nil {
+		return def, true
+	} else {
+		return val, false
+	}
+}
+
+func (c *Config) Uint64(key string) (val uint64, err error) {
+	if str, err := c.String(key); err != nil {
+		return 0, err
+	} else {
+		return strconv.ParseUint(str, 10, 64)
+	}
+}
+
+func (c *Config) Uint64OrDefault(key string, def uint64) (val uint64, used bool) {
+	if val, err := c.Uint64(key); err != nil {
+		return def, true
+	} else {
+		return val, false
+	}
+}
+
+func (c *Config) Duration(key string) (val time.Duration, err error) {
+	if str, err := c.String(key); err != nil {
+		return 0, err
+	} else {
+		return time.ParseDuration(str)
+	}
+}
+
+func (c *Config) DurationOrDefault(key string, def time.Duration) (val time.Duration, used bool) {
+	if val, err := c.Duration(key); err != nil {
+		return def, true
+	} else {
+		return val, false
+	}
+}
+
+func (c *Config) URL(key string) (val *url.URL, err error) {
+	if str, err := c.String(key); err != nil {
+		return nil, err
+	} else {
+		return url.Parse(str)
+	}
+}
+
+func (c *Config) URLOrDefault(key string, def *url.URL) (val *url.URL, used bool) {
+	if val, err := c.URL(key); err != nil {
+		return def, true
+	} else {
+		return val, false
+	}
+}
+
+func (c *Config) FilePath(key string) (val string, err error) {
+	if str, err := c.String(key); err != nil {
+		return "", err
+	} else {
+		return filepath.Clean(str), nil
+	}
+}
+
+func (c *Config) FilePathOrDefault(key string, def string) (val string, used bool) {
+	if val, err := c.FilePath(key); err != nil {
+		return def, true
+	} else {
+		return val, false
+	}
+}
+
+func (c *Config) IP(key string) (val net.IP, err error) {
+	if str, err := c.String(key); err != nil {
+		return nil, err
+	} else if val = net.ParseIP(str); val == nil {
+		return nil, ValueParseError
+	} else {
+		return val, nil
+	}
+}
+
+func (c *Config) IPOrDefault(key string, def net.IP) (val net.IP, used bool) {
+	if val, err := c.IP(key); err != nil {
+		return def, true
+	} else {
+		return val, false
+	}
 }
 
 func isComment(line string) bool {
