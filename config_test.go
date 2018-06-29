@@ -4,6 +4,9 @@ import (
 	"testing"
 	"strings"
 	"fmt"
+	"time"
+	"net/url"
+	"net"
 )
 
 func TestIsComment(t *testing.T) {
@@ -19,9 +22,11 @@ func TestIsComment(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		if isComment(test.in) != test.out {
-			t.Errorf(`Expected %v for input %q but got %v`, test.out, test.in, !test.out)
-		}
+		t.Run(test.in, func(t *testing.T) {
+			if isComment(test.in) != test.out {
+				t.Errorf(`Expected %v for input %#v but got %v`, test.out, test.in, !test.out)
+			}
+		})
 	}
 }
 
@@ -35,9 +40,11 @@ func TestIsEmpty(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		if isEmpty(test.in) != test.out {
-			t.Errorf(`Expected %v for input %q but got %v`, test.out, test.in, !test.out)
-		}
+		t.Run(test.in, func(t *testing.T) {
+			if isEmpty(test.in) != test.out {
+				t.Errorf(`Expected %v for input %#v but got %v`, test.out, test.in, !test.out)
+			}
+		})
 	}
 }
 
@@ -103,7 +110,7 @@ func TestIsName(t *testing.T) {
 	for _, test := range tests {
 		t.Run(fmt.Sprintf("%#v=%t", test.in, test.out), func(t *testing.T) {
 			if isName(test.in) != test.out {
-				t.Errorf(`Expected %v for input %q but got %v`, test.out, test.in, !test.out)
+				t.Errorf(`Expected %v for input %#v but got %v`, test.out, test.in, !test.out)
 			}
 		})
 	}
@@ -124,7 +131,7 @@ func TestParseName(t *testing.T) {
 		t.Run(fmt.Sprintf("%#v=%#v", test.in, test.out), func(t *testing.T) {
 			var out = parseName(test.in)
 			if out != test.out {
-				t.Errorf(`Expected %q for input %q but got %q`, test.out, test.in, out)
+				t.Errorf(`Expected %#v for input %#v but got %#v`, test.out, test.in, out)
 			}
 		})
 	}
@@ -132,51 +139,179 @@ func TestParseName(t *testing.T) {
 
 func TestRead(t *testing.T) {
 	input := `
-# this is a comment
+# these go into the "" config
 
-alpha=beta
-zeta=gamma
-bravo=charlie
-	# this is also a comment
+bool=true
+int64=1234567890
+
+	str=hello world
+
+duration=16h12m
+
+# this is also a comment
 
 foo:
-	123=456
-	cat = dog
-	bird = worm
-tooth= nail
+	uint64=1234
+	float64 = 1.234
 
 bar :
-	a=b
-	c= d
-			   f=g
-	baz:
-1+2=3
+url = http://jgpruitt.com
+
+	ip=127.0.0.1
 
 `
 	cfgs, err := Read(strings.NewReader(input))
 	if err != nil {
-		t.Errorf("Unexpected error: %s", err)
+		t.Errorf("unexpected error: %s", err)
 		return
 	}
-	t.Run("len(cfg)=4", func(t *testing.T) {
-		if len(cfgs) != 4 {
-			t.Errorf("Expected 4 Configs but got %d", len(cfgs))
+	t.Run("len(cfg)=3", func(t *testing.T) {
+		if len(cfgs) != 3 {
+			t.Errorf("expected 3 Configs but got %d", len(cfgs))
 		}
 	})
 	cfg, prs := cfgs[""]
 	t.Run(`cfgs[""]!=nil`, func(t *testing.T) {
 		if !prs {
-			t.Error("Missing the default config")
+			t.Error("missing the default config")
 		}
 	})
 	if prs {
-		t.Run(`alpha=beta`, func(t *testing.T) {
-			if val, prs := cfg.m["alpha"]; !prs {
-				t.Error(`Value for "alpha" was missing`)
-			} else if val != "beta" {
-				t.Errorf(`Expected "beta" but got %q`, val)
+		t.Run(`bool=true`, func(t *testing.T) {
+			if val, err := cfg.Bool("bool"); err != nil {
+				t.Error(err)
+			} else if !val {
+				t.Error("expected true but got false")
+			}
+		})
+		t.Run(`boolx`, func(t *testing.T) {
+			if val, used := cfg.BoolOrDefault("boolx", true); !used {
+				t.Error("expected to use default")
+			} else if !val {
+				t.Error("expected true but got false")
+			}
+		})
+		t.Run("int64=1234567890", func(t *testing.T) {
+			if val, err := cfg.Int64("int64"); err != nil {
+				t.Error(err)
+			} else if val != 1234567890 {
+				t.Errorf("expected 1234567890 but got %d", val)
+			}
+		})
+		t.Run("int64x", func(t *testing.T) {
+			if val, used := cfg.Int64OrDefault("int64x", 1234567890); !used {
+				t.Error("expected to use default")
+			} else if val != 1234567890 {
+				t.Errorf("expected 1234567890 but got %d", val)
+			}
+		})
+		t.Run("str=hello world", func(t *testing.T) {
+			if val, err := cfg.String("str"); err != nil {
+				t.Error(err)
+			} else if val != "hello world" {
+				t.Errorf(`expected "hello world" but got %#v`, val)
+			}
+		})
+		t.Run("strx", func(t *testing.T) {
+			if val, used := cfg.StringOrDefault("strx", "hello world"); !used {
+				t.Error("expected to use default")
+			} else if val != "hello world" {
+				t.Errorf(`expected "hello world" but got %#v`, val)
+			}
+		})
+		t.Run("duration=16h12m", func(t *testing.T) {
+			exp, _ := time.ParseDuration("16h12m")
+			if val, err := cfg.Duration("duration"); err != nil {
+				t.Error(err)
+			} else if val != exp {
+				t.Errorf(`expected %#v but got %#v`, exp, val)
+			}
+		})
+		t.Run("durationx", func(t *testing.T) {
+			exp, _ := time.ParseDuration("16h12m")
+			if val, used := cfg.DurationOrDefault("durationx", exp); !used {
+				t.Error("expected to use default")
+			} else if val != exp {
+				t.Errorf(`expected %#v but got %#v`, exp, val)
 			}
 		})
 	}
 
+	cfg, prs = cfgs["foo"]
+	t.Run(`cfgs["foo"]!=nil`, func(t *testing.T) {
+		if !prs {
+			t.Error("missing the foo config")
+		}
+	})
+	if prs {
+		t.Run(`uint64=1234`, func(t *testing.T) {
+			if val, err := cfg.Uint64("uint64"); err != nil {
+				t.Error(err)
+			} else if val != 1234 {
+				t.Errorf("expected 1234 but got %d", val)
+			}
+		})
+		t.Run(`uint64x`, func(t *testing.T) {
+			if val, used := cfg.Uint64OrDefault("uint64x", 1234); !used {
+				t.Error("expected to use default")
+			} else if val != 1234 {
+				t.Errorf("expected 1234 but got %d", val)
+			}
+		})
+		t.Run(`float64=1.234`, func(t *testing.T) {
+			if val, err := cfg.Float64("float64"); err != nil {
+				t.Error(err)
+			} else if val != 1.234 {
+				t.Errorf("expected 1.234 but got %f", val)
+			}
+		})
+		t.Run(`float64x`, func(t *testing.T) {
+			if val, used := cfg.Float64OrDefault("float64x", 1.234); !used {
+				t.Error("expected to use default")
+			} else if val != 1.234 {
+				t.Errorf("expected 1.234 but got %f", val)
+			}
+		})
+	}
+
+	cfg, prs = cfgs["bar"]
+	t.Run(`cfgs["bar"]!=nil`, func(t *testing.T) {
+		if !prs {
+			t.Error("missing the bar config")
+		}
+	})
+	if prs {
+		t.Run(`url=http://jgpruitt.com`, func(t *testing.T) {
+			exp,_ := url.Parse(`http://jgpruitt.com`)
+			if val, err := cfg.URL("url"); err != nil {
+				t.Error(err)
+			} else if val.String() != exp.String() {
+				t.Errorf("expected %s but got %s", exp, val)
+			}
+		})
+		t.Run(`urlx`, func(t *testing.T) {
+			exp,_ := url.Parse(`http://jgpruitt.com`)
+			if val, used := cfg.URLOrDefault("urlx", exp); !used {
+				t.Error("expected to use default")
+			} else if val.String() != exp.String() {
+				t.Errorf("expected %s but got %s", exp, val)
+			}
+		})
+		t.Run(`ip=127.0.0.1`, func(t *testing.T) {
+			exp := net.ParseIP("127.0.0.1")
+			if val, err := cfg.IP("ip"); err != nil {
+				t.Error(err)
+			} else if val.String() != exp.String() {
+				t.Errorf("expected %s but got %s", exp, val)
+			}
+		})
+		t.Run(`ipx`, func(t *testing.T) {
+			exp := net.ParseIP("127.0.0.1")
+			if val, used := cfg.IPOrDefault("ipx", exp); !used {
+				t.Error("expected to use default")
+			} else if val.String() != exp.String() {
+				t.Errorf("expected %s but got %s", exp, val)
+			}
+		})
+	}
 }
