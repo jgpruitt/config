@@ -44,6 +44,10 @@ type Config struct {
 	m map[string]string
 }
 
+func (c *Config) Set(key, val string) {
+	c.m[key] = val
+}
+
 func (c *Config) String(key string) (val string, err error) {
 	if val, ok := c.m[key]; !ok {
 		return "", KeyNotFoundError
@@ -76,6 +80,24 @@ func (c *Config) BoolOrDefault(key string, def bool) (val bool, used bool) {
 	}
 }
 
+func (c *Config) Float32(key string) (val float32, err error) {
+	if str, err := c.String(key); err != nil {
+		return 0, err
+	} else if i64, err := strconv.ParseFloat(str, 32); err != nil {
+		return 0, err
+	} else {
+		return float32(i64), nil
+	}
+}
+
+func (c *Config) Float32OrDefault(key string, def float32) (val float32, used bool) {
+	if val, err := c.Float32(key); err != nil {
+		return def, true
+	} else {
+		return val, false
+	}
+}
+
 func (c *Config) Float64(key string) (val float64, err error) {
 	if val, err := c.String(key); err != nil {
 		return math.NaN(), err
@@ -92,6 +114,42 @@ func (c *Config) Float64OrDefault(key string, def float64) (val float64, used bo
 	}
 }
 
+func (c *Config) Int(key string) (val int, err error) {
+	if str, err := c.String(key); err != nil {
+		return 0, err
+	} else if i64, err := strconv.ParseInt(str, 10, 0); err != nil {
+		return 0, err
+	} else {
+		return int(i64), nil
+	}
+}
+
+func (c *Config) IntOrDefault(key string, def int) (val int, used bool) {
+	if val, err := c.Int(key); err != nil {
+		return def, true
+	} else {
+		return val, false
+	}
+}
+
+func (c *Config) Int32(key string) (val int32, err error) {
+	if str, err := c.String(key); err != nil {
+		return 0, err
+	} else if i64, err := strconv.ParseInt(str, 10, 32); err != nil {
+		return 0, err
+	} else {
+		return int32(i64), nil
+	}
+}
+
+func (c *Config) Int32OrDefault(key string, def int32) (val int32, used bool) {
+	if val, err := c.Int32(key); err != nil {
+		return def, true
+	} else {
+		return val, false
+	}
+}
+
 func (c *Config) Int64(key string) (val int64, err error) {
 	if str, err := c.String(key); err != nil {
 		return 0, err
@@ -102,6 +160,42 @@ func (c *Config) Int64(key string) (val int64, err error) {
 
 func (c *Config) Int64OrDefault(key string, def int64) (val int64, used bool) {
 	if val, err := c.Int64(key); err != nil {
+		return def, true
+	} else {
+		return val, false
+	}
+}
+
+func (c *Config) Uint(key string) (val uint, err error) {
+	if str, err := c.String(key); err != nil {
+		return 0, err
+	} else if u64, err := strconv.ParseUint(str, 10, 0); err != nil {
+		return 0, err
+	} else {
+		return uint(u64), nil
+	}
+}
+
+func (c *Config) UintOrDefault(key string, def uint) (val uint, used bool) {
+	if val, err := c.Uint(key); err != nil {
+		return def, true
+	} else {
+		return val, false
+	}
+}
+
+func (c *Config) Uint32(key string) (val uint32, err error) {
+	if str, err := c.String(key); err != nil {
+		return 0, err
+	} else if u64, err := strconv.ParseUint(str, 10, 32); err != nil {
+		return 0, err
+	} else {
+		return uint32(u64), nil
+	}
+}
+
+func (c *Config) Uint32OrDefault(key string, def uint32) (val uint32, used bool) {
+	if val, err := c.Uint32(key); err != nil {
 		return def, true
 	} else {
 		return val, false

@@ -160,6 +160,7 @@ url = http://jgpruitt.com
 	ip=127.0.0.1
 
 `
+	// test read
 	cfgs, err := Read(strings.NewReader(input))
 	if err != nil {
 		t.Errorf("unexpected error: %s", err)
@@ -170,13 +171,18 @@ url = http://jgpruitt.com
 			t.Errorf("expected 3 Configs but got %d", len(cfgs))
 		}
 	})
+
+	// test the default "" config
 	cfg, prs := cfgs[""]
 	t.Run(`cfgs[""]!=nil`, func(t *testing.T) {
 		if !prs {
 			t.Error("missing the default config")
 		}
 	})
+
 	if prs {
+
+		// test bool methods
 		t.Run(`bool=true`, func(t *testing.T) {
 			if val, err := cfg.Bool("bool"); err != nil {
 				t.Error(err)
@@ -191,6 +197,8 @@ url = http://jgpruitt.com
 				t.Error("expected true but got false")
 			}
 		})
+
+		// test int64 methods
 		t.Run("int64=1234567890", func(t *testing.T) {
 			if val, err := cfg.Int64("int64"); err != nil {
 				t.Error(err)
@@ -205,6 +213,8 @@ url = http://jgpruitt.com
 				t.Errorf("expected 1234567890 but got %d", val)
 			}
 		})
+
+		// test string methods
 		t.Run("str=hello world", func(t *testing.T) {
 			if val, err := cfg.String("str"); err != nil {
 				t.Error(err)
@@ -219,6 +229,8 @@ url = http://jgpruitt.com
 				t.Errorf(`expected "hello world" but got %#v`, val)
 			}
 		})
+
+		// test duration methods
 		t.Run("duration=16h12m", func(t *testing.T) {
 			exp, _ := time.ParseDuration("16h12m")
 			if val, err := cfg.Duration("duration"); err != nil {
@@ -237,6 +249,7 @@ url = http://jgpruitt.com
 		})
 	}
 
+	// test "foo" config
 	cfg, prs = cfgs["foo"]
 	t.Run(`cfgs["foo"]!=nil`, func(t *testing.T) {
 		if !prs {
@@ -244,6 +257,8 @@ url = http://jgpruitt.com
 		}
 	})
 	if prs {
+
+		// test uint64 methods
 		t.Run(`uint64=1234`, func(t *testing.T) {
 			if val, err := cfg.Uint64("uint64"); err != nil {
 				t.Error(err)
@@ -258,6 +273,8 @@ url = http://jgpruitt.com
 				t.Errorf("expected 1234 but got %d", val)
 			}
 		})
+
+		// test float64 methods
 		t.Run(`float64=1.234`, func(t *testing.T) {
 			if val, err := cfg.Float64("float64"); err != nil {
 				t.Error(err)
@@ -274,6 +291,7 @@ url = http://jgpruitt.com
 		})
 	}
 
+	// test "bar" config
 	cfg, prs = cfgs["bar"]
 	t.Run(`cfgs["bar"]!=nil`, func(t *testing.T) {
 		if !prs {
@@ -281,6 +299,8 @@ url = http://jgpruitt.com
 		}
 	})
 	if prs {
+
+		// test URL methods
 		t.Run(`url=http://jgpruitt.com`, func(t *testing.T) {
 			exp,_ := url.Parse(`http://jgpruitt.com`)
 			if val, err := cfg.URL("url"); err != nil {
@@ -297,6 +317,8 @@ url = http://jgpruitt.com
 				t.Errorf("expected %s but got %s", exp, val)
 			}
 		})
+
+		// test IP methods
 		t.Run(`ip=127.0.0.1`, func(t *testing.T) {
 			exp := net.ParseIP("127.0.0.1")
 			if val, err := cfg.IP("ip"); err != nil {
