@@ -1,17 +1,17 @@
 package config
 
 import (
-	"testing"
-	"strings"
 	"fmt"
-	"time"
-	"net/url"
 	"net"
+	"net/url"
+	"strings"
+	"testing"
+	"time"
 )
 
 func TestIsComment(t *testing.T) {
-	var tests = []struct{
-		in string
+	var tests = []struct {
+		in  string
 		out bool
 	}{
 		{"", false},
@@ -31,11 +31,11 @@ func TestIsComment(t *testing.T) {
 }
 
 func TestIsEmpty(t *testing.T) {
-	var tests = []struct{
-		in string
+	var tests = []struct {
+		in  string
 		out bool
 	}{
-		{"", true },
+		{"", true},
 		{"ab", false},
 	}
 
@@ -49,8 +49,8 @@ func TestIsEmpty(t *testing.T) {
 }
 
 func TestIsKeyValue(t *testing.T) {
-	var tests = []struct{
-		in string
+	var tests = []struct {
+		in  string
 		out bool
 	}{
 		{"", false},
@@ -71,7 +71,7 @@ func TestIsKeyValue(t *testing.T) {
 }
 
 func TestParseKeyValue(t *testing.T) {
-	var tests = []struct{
+	var tests = []struct {
 		in  string
 		key string
 		val string
@@ -95,8 +95,8 @@ func TestParseKeyValue(t *testing.T) {
 }
 
 func TestIsName(t *testing.T) {
-	var tests = []struct{
-		in string
+	var tests = []struct {
+		in  string
 		out bool
 	}{
 		{"", false},
@@ -117,8 +117,8 @@ func TestIsName(t *testing.T) {
 }
 
 func TestParseName(t *testing.T) {
-	var tests = []struct{
-		in string
+	var tests = []struct {
+		in  string
 		out string
 	}{
 		{"foo:", "foo"},
@@ -302,7 +302,7 @@ url = http://jgpruitt.com
 
 		// test URL methods
 		t.Run(`url=http://jgpruitt.com`, func(t *testing.T) {
-			exp,_ := url.Parse(`http://jgpruitt.com`)
+			exp, _ := url.Parse(`http://jgpruitt.com`)
 			if val, err := cfg.URL("url"); err != nil {
 				t.Error(err)
 			} else if val.String() != exp.String() {
@@ -310,7 +310,7 @@ url = http://jgpruitt.com
 			}
 		})
 		t.Run(`urlx`, func(t *testing.T) {
-			exp,_ := url.Parse(`http://jgpruitt.com`)
+			exp, _ := url.Parse(`http://jgpruitt.com`)
 			if val, used := cfg.URLOrDefault("urlx", exp); !used {
 				t.Error("expected to use default")
 			} else if val.String() != exp.String() {

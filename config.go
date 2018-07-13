@@ -23,18 +23,18 @@
 package config
 
 import (
-	"io"
 	"bufio"
-	"strings"
-	"unicode"
 	"errors"
 	"fmt"
-	"strconv"
+	"io"
 	"math"
-	"time"
+	"net"
 	"net/url"
 	"path/filepath"
-	"net"
+	"strconv"
+	"strings"
+	"time"
+	"unicode"
 )
 
 var KeyNotFoundError = errors.New("key not found")
