@@ -37,83 +37,126 @@ import (
 	"unicode"
 )
 
-var KeyNotFoundError = errors.New("key not found")
-var ValueParseError = errors.New("failed to parse value into given type")
+// ErrKeyNotFound returned when the Key queried does not exist in the configuration
+var ErrKeyNotFound = errors.New("key not found")
 
+// ErrParseValue returned when the value could not be parsed into the given type
+var ErrParseValue = errors.New("failed to parse value into given type")
+
+// Config is a set of key/value pairs
 type Config struct {
 	m map[string]string
 }
 
+// Set adds a key/value pair to the configuration.
+// If the key already exists, the value will be replaced
 func (c *Config) Set(key, val string) {
 	c.m[key] = val
 }
 
+// String returns the value associated with the given key as a string.
+// If the key does not exist, ErrKeyNotFound is returned.
 func (c *Config) String(key string) (val string, err error) {
-	if val, ok := c.m[key]; !ok {
-		return "", KeyNotFoundError
-	} else {
-		return val, nil
+	var ok bool
+	val, ok = c.m[key]
+	if !ok {
+		return "", ErrKeyNotFound
 	}
+	return
 }
 
+// StringOrDefault returns the value associated with the given key as a string.
+// If the key does not exist or cannot be parsed appropriately, the default value "def" is returned.
+// "used" will be true if the default value was used.
 func (c *Config) StringOrDefault(key string, def string) (val string, used bool) {
-	if val, err := c.String(key); err != nil {
+	var err error
+	val, err = c.String(key)
+	if err != nil {
 		return def, true
-	} else {
-		return val, false
 	}
+	return val, false
 }
 
+// Bool returns the value associated with the given key as a bool.
+// If the key does not exist, ErrKeyNotFound is returned.
+// An error is returned if the value cannot be parsed into a bool.
 func (c *Config) Bool(key string) (val bool, err error) {
-	if val, err := c.String(key); err != nil {
+	str, err := c.String(key)
+	if err != nil {
 		return false, err
-	} else {
-		return strconv.ParseBool(val)
 	}
+	return strconv.ParseBool(str)
 }
 
+// BoolOrDefault returns the value associated with the given key as a bool.
+// If the key does not exist or cannot be parsed appropriately, the default value "def" is returned.
+// "used" will be true if the default value was used.
 func (c *Config) BoolOrDefault(key string, def bool) (val bool, used bool) {
-	if val, err := c.Bool(key); err != nil {
+	var err error
+	val, err = c.Bool(key)
+	if err != nil {
 		return def, true
-	} else {
-		return val, false
 	}
+	return val, false
 }
 
+// Float32 returns the value associated with the given key as a float32.
+// If the key does not exist, ErrKeyNotFound is returned.
+// An error is returned if the value cannot be parsed into a float32.
 func (c *Config) Float32(key string) (val float32, err error) {
-	if str, err := c.String(key); err != nil {
+	var (
+		str string
+		f64 float64
+	)
+	str, err = c.String(key)
+	if err != nil {
 		return 0, err
-	} else if i64, err := strconv.ParseFloat(str, 32); err != nil {
-		return 0, err
-	} else {
-		return float32(i64), nil
 	}
+	f64, err = strconv.ParseFloat(str, 32)
+	if err != nil {
+		return 0, err
+	}
+	return float32(f64), nil
 }
 
+// Float32OrDefault returns the value associated with the given key as a float32.
+// If the key does not exist or cannot be parsed appropriately, the default value "def" is returned.
+// "used" will be true if the default value was used.
 func (c *Config) Float32OrDefault(key string, def float32) (val float32, used bool) {
-	if val, err := c.Float32(key); err != nil {
+	var err error
+	val, err = c.Float32(key)
+	if err != nil {
 		return def, true
-	} else {
-		return val, false
 	}
+	return val, false
 }
 
+// Float64 returns the value associated with the given key as a float64.
+// If the key does not exist, ErrKeyNotFound is returned.
+// An error is returned if the value cannot be parsed into a float64.
 func (c *Config) Float64(key string) (val float64, err error) {
-	if val, err := c.String(key); err != nil {
+	str, err := c.String(key)
+	if err != nil {
 		return math.NaN(), err
-	} else {
-		return strconv.ParseFloat(val, 64)
 	}
+	return strconv.ParseFloat(str, 64)
 }
 
+// Float64OrDefault returns the value associated with the given key as a float64.
+// If the key does not exist or cannot be parsed appropriately, the default value "def" is returned.
+// "used" will be true if the default value was used.
 func (c *Config) Float64OrDefault(key string, def float64) (val float64, used bool) {
-	if val, err := c.Float64(key); err != nil {
+	var err error
+	val, err = c.Float64(key)
+	if err != nil {
 		return def, true
-	} else {
-		return val, false
 	}
+	return val, false
 }
 
+// Int returns the value associated with the given key as an int.
+// If the key does not exist, ErrKeyNotFound is returned.
+// An error is returned if the value cannot be parsed into an int.
 func (c *Config) Int(key string) (val int, err error) {
 	if str, err := c.String(key); err != nil {
 		return 0, err
@@ -124,6 +167,9 @@ func (c *Config) Int(key string) (val int, err error) {
 	}
 }
 
+// IntOrDefault returns the value associated with the given key as an int.
+// If the key does not exist or cannot be parsed appropriately, the default value "def" is returned.
+// "used" will be true if the default value was used.
 func (c *Config) IntOrDefault(key string, def int) (val int, used bool) {
 	if val, err := c.Int(key); err != nil {
 		return def, true
@@ -132,6 +178,9 @@ func (c *Config) IntOrDefault(key string, def int) (val int, used bool) {
 	}
 }
 
+// Int32 returns the value associated with the given key as an int32.
+// If the key does not exist, ErrKeyNotFound is returned.
+// An error is returned if the value cannot be parsed into an int32.
 func (c *Config) Int32(key string) (val int32, err error) {
 	if str, err := c.String(key); err != nil {
 		return 0, err
@@ -142,6 +191,9 @@ func (c *Config) Int32(key string) (val int32, err error) {
 	}
 }
 
+// Int32OrDefault returns the value associated with the given key as an int32.
+// If the key does not exist or cannot be parsed appropriately, the default value "def" is returned.
+// "used" will be true if the default value was used.
 func (c *Config) Int32OrDefault(key string, def int32) (val int32, used bool) {
 	if val, err := c.Int32(key); err != nil {
 		return def, true
@@ -150,6 +202,9 @@ func (c *Config) Int32OrDefault(key string, def int32) (val int32, used bool) {
 	}
 }
 
+// Int64 returns the value associated with the given key as an int64.
+// If the key does not exist, ErrKeyNotFound is returned.
+// An error is returned if the value cannot be parsed into an int64.
 func (c *Config) Int64(key string) (val int64, err error) {
 	if str, err := c.String(key); err != nil {
 		return 0, err
@@ -158,6 +213,9 @@ func (c *Config) Int64(key string) (val int64, err error) {
 	}
 }
 
+// Int64OrDefault returns the value associated with the given key as an int64.
+// If the key does not exist or cannot be parsed appropriately, the default value "def" is returned.
+// "used" will be true if the default value was used.
 func (c *Config) Int64OrDefault(key string, def int64) (val int64, used bool) {
 	if val, err := c.Int64(key); err != nil {
 		return def, true
@@ -166,6 +224,9 @@ func (c *Config) Int64OrDefault(key string, def int64) (val int64, used bool) {
 	}
 }
 
+// Uint returns the value associated with the given key as a uint.
+// If the key does not exist, ErrKeyNotFound is returned.
+// An error is returned if the value cannot be parsed into a uint.
 func (c *Config) Uint(key string) (val uint, err error) {
 	if str, err := c.String(key); err != nil {
 		return 0, err
@@ -176,6 +237,9 @@ func (c *Config) Uint(key string) (val uint, err error) {
 	}
 }
 
+// UintOrDefault returns the value associated with the given key as a uint.
+// If the key does not exist or cannot be parsed appropriately, the default value "def" is returned.
+// "used" will be true if the default value was used.
 func (c *Config) UintOrDefault(key string, def uint) (val uint, used bool) {
 	if val, err := c.Uint(key); err != nil {
 		return def, true
@@ -184,6 +248,9 @@ func (c *Config) UintOrDefault(key string, def uint) (val uint, used bool) {
 	}
 }
 
+// Uint32 returns the value associated with the given key as a uint32.
+// If the key does not exist, ErrKeyNotFound is returned.
+// An error is returned if the value cannot be parsed into a uint32.
 func (c *Config) Uint32(key string) (val uint32, err error) {
 	if str, err := c.String(key); err != nil {
 		return 0, err
@@ -194,6 +261,9 @@ func (c *Config) Uint32(key string) (val uint32, err error) {
 	}
 }
 
+// Uint32OrDefault returns the value associated with the given key as a uint32.
+// If the key does not exist or cannot be parsed appropriately, the default value "def" is returned.
+// "used" will be true if the default value was used.
 func (c *Config) Uint32OrDefault(key string, def uint32) (val uint32, used bool) {
 	if val, err := c.Uint32(key); err != nil {
 		return def, true
@@ -202,6 +272,9 @@ func (c *Config) Uint32OrDefault(key string, def uint32) (val uint32, used bool)
 	}
 }
 
+// Uint64 returns the value associated with the given key as a uint64.
+// If the key does not exist, ErrKeyNotFound is returned.
+// An error is returned if the value cannot be parsed into a uint64.
 func (c *Config) Uint64(key string) (val uint64, err error) {
 	if str, err := c.String(key); err != nil {
 		return 0, err
@@ -210,6 +283,9 @@ func (c *Config) Uint64(key string) (val uint64, err error) {
 	}
 }
 
+// Uint64OrDefault returns the value associated with the given key as a uint64.
+// If the key does not exist or cannot be parsed appropriately, the default value "def" is returned.
+// "used" will be true if the default value was used.
 func (c *Config) Uint64OrDefault(key string, def uint64) (val uint64, used bool) {
 	if val, err := c.Uint64(key); err != nil {
 		return def, true
@@ -218,6 +294,9 @@ func (c *Config) Uint64OrDefault(key string, def uint64) (val uint64, used bool)
 	}
 }
 
+// Duration returns the value associated with the given key as a time.Duration.
+// If the key does not exist, ErrKeyNotFound is returned.
+// An error is returned if the value cannot be parsed into a time.Duration.
 func (c *Config) Duration(key string) (val time.Duration, err error) {
 	if str, err := c.String(key); err != nil {
 		return 0, err
@@ -226,6 +305,9 @@ func (c *Config) Duration(key string) (val time.Duration, err error) {
 	}
 }
 
+// DurationOrDefault returns the value associated with the given key as a time.Duration.
+// If the key does not exist or cannot be parsed appropriately, the default value "def" is returned.
+// "used" will be true if the default value was used.
 func (c *Config) DurationOrDefault(key string, def time.Duration) (val time.Duration, used bool) {
 	if val, err := c.Duration(key); err != nil {
 		return def, true
@@ -234,6 +316,9 @@ func (c *Config) DurationOrDefault(key string, def time.Duration) (val time.Dura
 	}
 }
 
+// URL returns the value associated with the given key as a *url.URL.
+// If the key does not exist, ErrKeyNotFound is returned.
+// An error is returned if the value cannot be parsed into a *url.URL.
 func (c *Config) URL(key string) (val *url.URL, err error) {
 	if str, err := c.String(key); err != nil {
 		return nil, err
@@ -242,6 +327,9 @@ func (c *Config) URL(key string) (val *url.URL, err error) {
 	}
 }
 
+// URLOrDefault returns the value associated with the given key as a *url.URL.
+// If the key does not exist or cannot be parsed appropriately, the default value "def" is returned.
+// "used" will be true if the default value was used.
 func (c *Config) URLOrDefault(key string, def *url.URL) (val *url.URL, used bool) {
 	if val, err := c.URL(key); err != nil {
 		return def, true
@@ -250,6 +338,10 @@ func (c *Config) URLOrDefault(key string, def *url.URL) (val *url.URL, used bool
 	}
 }
 
+// FilePath returns the value associated with the given key as a string that
+// has been interpretted as a file path and cleaned.
+// If the key does not exist, ErrKeyNotFound is returned.
+// An error is returned if the value cannot be parsed into a *url.URL.
 func (c *Config) FilePath(key string) (val string, err error) {
 	if str, err := c.String(key); err != nil {
 		return "", err
@@ -258,6 +350,10 @@ func (c *Config) FilePath(key string) (val string, err error) {
 	}
 }
 
+// FilePathOrDefault returns the value associated with the given key as a string that
+// has been interpretted as a file path and cleaned.
+// If the key does not exist or cannot be parsed appropriately, the default value "def" is returned.
+// "used" will be true if the default value was used.
 func (c *Config) FilePathOrDefault(key string, def string) (val string, used bool) {
 	if val, err := c.FilePath(key); err != nil {
 		return def, true
@@ -266,16 +362,22 @@ func (c *Config) FilePathOrDefault(key string, def string) (val string, used boo
 	}
 }
 
+// IP returns the value associated with the given key as a net.IP.
+// If the key does not exist, ErrKeyNotFound is returned.
+// An error is returned if the value cannot be parsed into a net.IP.
 func (c *Config) IP(key string) (val net.IP, err error) {
 	if str, err := c.String(key); err != nil {
 		return nil, err
 	} else if val = net.ParseIP(str); val == nil {
-		return nil, ValueParseError
+		return nil, ErrParseValue
 	} else {
 		return val, nil
 	}
 }
 
+// IPOrDefault returns the value associated with the given key as a net.IP.
+// If the key does not exist or cannot be parsed appropriately, the default value "def" is returned.
+// "used" will be true if the default value was used.
 func (c *Config) IPOrDefault(key string, def net.IP) (val net.IP, used bool) {
 	if val, err := c.IP(key); err != nil {
 		return def, true
@@ -312,6 +414,9 @@ func parseName(line string) string {
 	})
 }
 
+// Read parses one or more Configs out of the given io.Reader.
+// An error is returned if there is a problem reading or
+// unrecognized input.
 func Read(r io.Reader) (map[string]*Config, error) {
 	var m = make(map[string]*Config)
 	var cfg = &Config{
@@ -320,7 +425,7 @@ func Read(r io.Reader) (map[string]*Config, error) {
 	m[""] = cfg
 
 	var buf = bufio.NewReader(r)
-	var lnum uint = 0
+	var lnum uint
 	for {
 		var line, err = buf.ReadString('\n')
 		if err != nil && err != io.EOF {
@@ -342,7 +447,7 @@ func Read(r io.Reader) (map[string]*Config, error) {
 			}
 			cfg = m[name]
 		} else {
-			return nil, errors.New(fmt.Sprintf("Unrecognized input at line %d: %s", lnum, line))
+			return nil, fmt.Errorf("unrecognized input at line %d: %s", lnum, line)
 		}
 		if err != nil && err == io.EOF {
 			break
