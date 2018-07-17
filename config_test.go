@@ -2,12 +2,52 @@ package config
 
 import (
 	"fmt"
-	"net"
-	"net/url"
 	"strings"
 	"testing"
-	"time"
 )
+
+
+var input = `
+# these go into the "" config
+
+bool=true
+!bool = 1234
+
+int64=1234567890
+!int64 = alpha
+
+int= 1
+!int = beta
+
+int32 =  123
+!int32 = ^^^^^
+
+	str=hello world
+
+duration=16h12m
+!duration=2018-06-15
+
+# this is also a comment
+
+foo:
+	uint64=1234
+!uint64 = aaaa
+uint32 = 123
+!uint32 = -1
+	float64 = 1.234
+	!float64 = gamma
+float32 = 1.2233
+		!float32 =delta
+	
+bar :
+url = http://jgpruitt.com
+!url = charlie
+	ip=127.0.0.1
+!ip=http://jgpruitt.com
+filepath=/usr/bin/env
+
+
+`
 
 func TestIsComment(t *testing.T) {
 	var tests = []struct {
@@ -137,48 +177,106 @@ func TestParseName(t *testing.T) {
 	}
 }
 
+
 func TestRead(t *testing.T) {
-	input := `
-# these go into the "" config
-
-bool=true
-int64=1234567890
-
-	str=hello world
-
-duration=16h12m
-
-# this is also a comment
-
-foo:
-	uint64=1234
-	float64 = 1.234
-
-bar :
-url = http://jgpruitt.com
-
-	ip=127.0.0.1
-
-`
 	// test read
 	cfgs, err := Read(strings.NewReader(input))
 	if err != nil {
-		t.Errorf("unexpected error: %s", err)
-		return
+		t.Fatalf("unexpected error: %s", err)
 	}
+
+	// find all 3 configs?
 	t.Run("len(cfg)=3", func(t *testing.T) {
 		if len(cfgs) != 3 {
 			t.Errorf("expected 3 Configs but got %d", len(cfgs))
 		}
 	})
 
-	// test the default "" config
-	cfg, prs := cfgs[""]
+	// is the "" default config present?
 	t.Run(`cfgs[""]!=nil`, func(t *testing.T) {
-		if !prs {
+		if _, prs := cfgs[""]; !prs {
 			t.Error("missing the default config")
 		}
 	})
+
+	// is the "foo" config present?
+	t.Run(`cfgs["foo"]!=nil`, func(t *testing.T) {
+		if _, prs := cfgs["foo"]; !prs {
+			t.Error("missing the 'foo' config")
+		}
+	})
+
+	// is the "bar" config present?
+	t.Run(`cfgs["bar"]!=nil`, func(t *testing.T) {
+		if _, prs := cfgs["bar"]; !prs {
+			t.Error("missing the 'bar' config")
+		}
+	})
+}
+
+func TestConfig_Bool(t *testing.T) {
+	var (
+		cfgs map[string]*Config
+		cfg *Config
+		val bool
+		err error
+	)
+
+	cfgs, err = Read(strings.NewReader(`
+    bool1 = true
+	bool2 = F
+	bool3 = +++
+	`))
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+
+
+	cfg = cfgs[""]
+	if cfg == nil {
+		t.Fatal("default config missing")
+	}
+
+	_, err = cfg.Bool("bool0")
+	t.Run("bool0", func(t *testing.T) {
+		if err != ErrKeyNotFound {
+			t.Error("expected 'ErrKeyNotFound'")
+		}
+	})
+
+	val, err = cfg.Bool("bool1")
+	t.Run("bool1", func(t *testing.T) {
+		if err != nil {
+			t.Errorf("did not expect an error: %s", err)
+		}
+		if val != true {
+			t.Error("expected true but got false")
+		}
+	})
+
+	val, err = cfg.Bool("bool2")
+	t.Run("bool2", func(t *testing.T) {
+		if err != nil {
+			t.Errorf("did not expect an error: %s", err)
+		}
+		if val != false {
+			t.Error("expected false but got true")
+		}
+	})
+
+
+	val, err = cfg.Bool("bool3")
+	t.Run("bool3", func(t *testing.T) {
+		if err == nil {
+			t.Error("expected an error but did not get one")
+		}
+	})
+}
+
+/*
+
+
+
 
 	if prs {
 
@@ -337,3 +435,4 @@ url = http://jgpruitt.com
 		})
 	}
 }
+*/
