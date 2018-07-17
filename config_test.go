@@ -6,49 +6,6 @@ import (
 	"testing"
 )
 
-
-var input = `
-# these go into the "" config
-
-bool=true
-!bool = 1234
-
-int64=1234567890
-!int64 = alpha
-
-int= 1
-!int = beta
-
-int32 =  123
-!int32 = ^^^^^
-
-	str=hello world
-
-duration=16h12m
-!duration=2018-06-15
-
-# this is also a comment
-
-foo:
-	uint64=1234
-!uint64 = aaaa
-uint32 = 123
-!uint32 = -1
-	float64 = 1.234
-	!float64 = gamma
-float32 = 1.2233
-		!float32 =delta
-	
-bar :
-url = http://jgpruitt.com
-!url = charlie
-	ip=127.0.0.1
-!ip=http://jgpruitt.com
-filepath=/usr/bin/env
-
-
-`
-
 func TestIsComment(t *testing.T) {
 	var tests = []struct {
 		in  string
@@ -177,8 +134,47 @@ func TestParseName(t *testing.T) {
 	}
 }
 
-
 func TestRead(t *testing.T) {
+
+	var input = `
+# these go into the "" config
+
+bool=true
+!bool = 1234
+
+int64=1234567890
+!int64 = alpha
+
+int= 1
+!int = beta
+
+int32 =  123
+!int32 = ^^^^^
+
+	str=hello world
+
+duration=16h12m
+!duration=2018-06-15
+
+# this is also a comment
+
+foo:
+	uint64=1234
+!uint64 = aaaa
+uint32 = 123
+!uint32 = -1
+	float64 = 1.234
+	!float64 = gamma
+float32 = 1.2233
+		!float32 =delta
+	
+bar :
+url = http://jgpruitt.com
+!url = charlie
+	ip=127.0.0.1
+!ip=http://jgpruitt.com
+filepath=/usr/bin/env
+`
 	// test read
 	cfgs, err := Read(strings.NewReader(input))
 	if err != nil {
@@ -217,9 +213,9 @@ func TestRead(t *testing.T) {
 func TestConfig_Bool(t *testing.T) {
 	var (
 		cfgs map[string]*Config
-		cfg *Config
-		val bool
-		err error
+		cfg  *Config
+		val  bool
+		err  error
 	)
 
 	cfgs, err = Read(strings.NewReader(`
@@ -230,7 +226,6 @@ func TestConfig_Bool(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %s", err)
 	}
-
 
 	cfg = cfgs[""]
 	if cfg == nil {
@@ -263,7 +258,6 @@ func TestConfig_Bool(t *testing.T) {
 			t.Error("expected false but got true")
 		}
 	})
-
 
 	val, err = cfg.Bool("bool3")
 	t.Run("bool3", func(t *testing.T) {
