@@ -267,6 +267,59 @@ func TestConfig_Bool(t *testing.T) {
 	})
 }
 
+func TestConfig_BoolOrDefault(t *testing.T) {
+	var (
+		cfgs map[string]*Config
+		cfg  *Config
+		val  bool
+		used bool
+		err  error
+	)
+
+	cfgs, err = Read(strings.NewReader(`
+    bool1 = true
+	bool2 = notabool
+	`))
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+
+	cfg = cfgs[""]
+	if cfg == nil {
+		t.Fatal("default config missing")
+	}
+
+	val, used = cfg.BoolOrDefault("bool1", false)
+	t.Run("bool1", func(t *testing.T) {
+		if !val {
+			t.Error("expected val=true but got false")
+		}
+		if used {
+			t.Error("did not expect to use default")
+		}
+	})
+
+	val, used = cfg.BoolOrDefault("bool2", true)
+	t.Run("bool2", func(t *testing.T) {
+		if !val {
+			t.Error("expected val=true but got false")
+		}
+		if !used {
+			t.Error("expected to use default")
+		}
+	})
+
+	val, used = cfg.BoolOrDefault("bool3", true)
+	t.Run("bool3", func(t *testing.T) {
+		if !val {
+			t.Error("expected val=true but got false")
+		}
+		if !used {
+			t.Error("expected to use default")
+		}
+	})
+}
+
 /*
 
 
