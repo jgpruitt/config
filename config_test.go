@@ -210,6 +210,97 @@ filepath=/usr/bin/env
 	})
 }
 
+func TestConfig_String(t *testing.T) {
+	var (
+		cfgs map[string]*Config
+		cfg  *Config
+		val  string
+		err  error
+	)
+
+	cfgs, err = Read(strings.NewReader(`
+    string1 = hello world
+	string2 = 1234
+	`))
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+
+	cfg = cfgs[""]
+	if cfg == nil {
+		t.Fatal("default config missing")
+	}
+
+	_, err = cfg.String("string0")
+	t.Run("string0", func(t *testing.T) {
+		if err != ErrKeyNotFound {
+			t.Error("expected 'ErrKeyNotFound'")
+		}
+	})
+
+	val, err = cfg.String("string1")
+	t.Run("string1", func(t *testing.T) {
+		if err != nil {
+			t.Errorf("did not expect an error: %s", err)
+		}
+		if val != "hello world" {
+			t.Errorf("expected 'hello world' but got '%s'", val)
+		}
+	})
+
+	val, err = cfg.String("string2")
+	t.Run("string2", func(t *testing.T) {
+		if err != nil {
+			t.Errorf("did not expect an error: %s", err)
+		}
+		if val != "1234" {
+			t.Errorf("expected '1234' but got '%s'", val)
+		}
+	})
+}
+
+func TestConfig_StringOrDefault(t *testing.T) {
+	var (
+		cfgs map[string]*Config
+		cfg  *Config
+		val  string
+		used bool
+		err  error
+	)
+
+	cfgs, err = Read(strings.NewReader(`
+    string1 = fizzbuzz
+	`))
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+
+	cfg = cfgs[""]
+	if cfg == nil {
+		t.Fatal("default config missing")
+	}
+
+	val, used = cfg.StringOrDefault("string1", "alpha")
+	t.Run("string1", func(t *testing.T) {
+		if val != "fizzbuzz" {
+			t.Errorf("expected val='fizzbuzz' but got '%s'", val)
+		}
+		if used {
+			t.Error("did not expect to use default")
+		}
+	})
+
+	val, used = cfg.StringOrDefault("string2", "beta")
+	t.Run("string2", func(t *testing.T) {
+		if val != "beta" {
+			t.Errorf("expected val='beta' but got '%s'", val)
+		}
+		if !used {
+			t.Error("expected to use default")
+		}
+	})
+}
+
 func TestConfig_Bool(t *testing.T) {
 	var (
 		cfgs map[string]*Config
@@ -320,166 +411,809 @@ func TestConfig_BoolOrDefault(t *testing.T) {
 	})
 }
 
-/*
+func TestConfig_Float32(t *testing.T) {
+	var (
+		cfgs map[string]*Config
+		cfg  *Config
+		val  float32
+		err  error
+	)
 
-
-
-
-	if prs {
-
-		// test bool methods
-		t.Run(`bool=true`, func(t *testing.T) {
-			if val, err := cfg.Bool("bool"); err != nil {
-				t.Error(err)
-			} else if !val {
-				t.Error("expected true but got false")
-			}
-		})
-		t.Run(`boolx`, func(t *testing.T) {
-			if val, used := cfg.BoolOrDefault("boolx", true); !used {
-				t.Error("expected to use default")
-			} else if !val {
-				t.Error("expected true but got false")
-			}
-		})
-
-		// test int64 methods
-		t.Run("int64=1234567890", func(t *testing.T) {
-			if val, err := cfg.Int64("int64"); err != nil {
-				t.Error(err)
-			} else if val != 1234567890 {
-				t.Errorf("expected 1234567890 but got %d", val)
-			}
-		})
-		t.Run("int64x", func(t *testing.T) {
-			if val, used := cfg.Int64OrDefault("int64x", 1234567890); !used {
-				t.Error("expected to use default")
-			} else if val != 1234567890 {
-				t.Errorf("expected 1234567890 but got %d", val)
-			}
-		})
-
-		// test string methods
-		t.Run("str=hello world", func(t *testing.T) {
-			if val, err := cfg.String("str"); err != nil {
-				t.Error(err)
-			} else if val != "hello world" {
-				t.Errorf(`expected "hello world" but got %#v`, val)
-			}
-		})
-		t.Run("strx", func(t *testing.T) {
-			if val, used := cfg.StringOrDefault("strx", "hello world"); !used {
-				t.Error("expected to use default")
-			} else if val != "hello world" {
-				t.Errorf(`expected "hello world" but got %#v`, val)
-			}
-		})
-
-		// test duration methods
-		t.Run("duration=16h12m", func(t *testing.T) {
-			exp, _ := time.ParseDuration("16h12m")
-			if val, err := cfg.Duration("duration"); err != nil {
-				t.Error(err)
-			} else if val != exp {
-				t.Errorf(`expected %#v but got %#v`, exp, val)
-			}
-		})
-		t.Run("durationx", func(t *testing.T) {
-			exp, _ := time.ParseDuration("16h12m")
-			if val, used := cfg.DurationOrDefault("durationx", exp); !used {
-				t.Error("expected to use default")
-			} else if val != exp {
-				t.Errorf(`expected %#v but got %#v`, exp, val)
-			}
-		})
+	cfgs, err = Read(strings.NewReader(`
+    float32_1 = 123.4
+	float32_2 = -12.34
+	`))
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
 	}
 
-	// test "foo" config
-	cfg, prs = cfgs["foo"]
-	t.Run(`cfgs["foo"]!=nil`, func(t *testing.T) {
-		if !prs {
-			t.Error("missing the foo config")
+	cfg = cfgs[""]
+	if cfg == nil {
+		t.Fatal("default config missing")
+	}
+
+	_, err = cfg.Float32("float32_0")
+	t.Run("float32_0", func(t *testing.T) {
+		if err != ErrKeyNotFound {
+			t.Error("expected 'ErrKeyNotFound'")
 		}
 	})
-	if prs {
 
-		// test uint64 methods
-		t.Run(`uint64=1234`, func(t *testing.T) {
-			if val, err := cfg.Uint64("uint64"); err != nil {
-				t.Error(err)
-			} else if val != 1234 {
-				t.Errorf("expected 1234 but got %d", val)
-			}
-		})
-		t.Run(`uint64x`, func(t *testing.T) {
-			if val, used := cfg.Uint64OrDefault("uint64x", 1234); !used {
-				t.Error("expected to use default")
-			} else if val != 1234 {
-				t.Errorf("expected 1234 but got %d", val)
-			}
-		})
-
-		// test float64 methods
-		t.Run(`float64=1.234`, func(t *testing.T) {
-			if val, err := cfg.Float64("float64"); err != nil {
-				t.Error(err)
-			} else if val != 1.234 {
-				t.Errorf("expected 1.234 but got %f", val)
-			}
-		})
-		t.Run(`float64x`, func(t *testing.T) {
-			if val, used := cfg.Float64OrDefault("float64x", 1.234); !used {
-				t.Error("expected to use default")
-			} else if val != 1.234 {
-				t.Errorf("expected 1.234 but got %f", val)
-			}
-		})
-	}
-
-	// test "bar" config
-	cfg, prs = cfgs["bar"]
-	t.Run(`cfgs["bar"]!=nil`, func(t *testing.T) {
-		if !prs {
-			t.Error("missing the bar config")
+	val, err = cfg.Float32("float32_1")
+	t.Run("float32_1", func(t *testing.T) {
+		if err != nil {
+			t.Errorf("did not expect an error: %s", err)
+		}
+		if val != 123.4 {
+			t.Errorf("expected 123.4 but got %f", val)
 		}
 	})
-	if prs {
 
-		// test URL methods
-		t.Run(`url=http://jgpruitt.com`, func(t *testing.T) {
-			exp, _ := url.Parse(`http://jgpruitt.com`)
-			if val, err := cfg.URL("url"); err != nil {
-				t.Error(err)
-			} else if val.String() != exp.String() {
-				t.Errorf("expected %s but got %s", exp, val)
-			}
-		})
-		t.Run(`urlx`, func(t *testing.T) {
-			exp, _ := url.Parse(`http://jgpruitt.com`)
-			if val, used := cfg.URLOrDefault("urlx", exp); !used {
-				t.Error("expected to use default")
-			} else if val.String() != exp.String() {
-				t.Errorf("expected %s but got %s", exp, val)
-			}
-		})
-
-		// test IP methods
-		t.Run(`ip=127.0.0.1`, func(t *testing.T) {
-			exp := net.ParseIP("127.0.0.1")
-			if val, err := cfg.IP("ip"); err != nil {
-				t.Error(err)
-			} else if val.String() != exp.String() {
-				t.Errorf("expected %s but got %s", exp, val)
-			}
-		})
-		t.Run(`ipx`, func(t *testing.T) {
-			exp := net.ParseIP("127.0.0.1")
-			if val, used := cfg.IPOrDefault("ipx", exp); !used {
-				t.Error("expected to use default")
-			} else if val.String() != exp.String() {
-				t.Errorf("expected %s but got %s", exp, val)
-			}
-		})
-	}
+	val, err = cfg.Float32("float32_2")
+	t.Run("float32_2", func(t *testing.T) {
+		if err != nil {
+			t.Errorf("did not expect an error: %s", err)
+		}
+		if val != -12.34 {
+			t.Errorf("expected -12.34 but got %f", val)
+		}
+	})
 }
-*/
+
+func TestConfig_Float32OrDefault(t *testing.T) {
+	var (
+		cfgs map[string]*Config
+		cfg  *Config
+		val  float32
+		used bool
+		err  error
+	)
+
+	cfgs, err = Read(strings.NewReader(`
+    float32_1 = 123.4
+	float32_2 = gamma
+	`))
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+
+	cfg = cfgs[""]
+	if cfg == nil {
+		t.Fatal("default config missing")
+	}
+
+	val, used = cfg.Float32OrDefault("float32_0", 99.99)
+	t.Run("float32_0", func(t *testing.T) {
+		if val != 99.99 {
+			t.Errorf("expected val=99.99 but got %f", val)
+		}
+		if !used {
+			t.Error("expected to use default")
+		}
+	})
+
+	val, used = cfg.Float32OrDefault("float32_1", 99.99)
+	t.Run("float32_1", func(t *testing.T) {
+		if val != 123.4 {
+			t.Errorf("expected val=123.4 but got %f", val)
+		}
+		if used {
+			t.Error("did not expect to use default")
+		}
+	})
+
+	val, used = cfg.Float32OrDefault("float32_2", 99.99)
+	t.Run("float32_2", func(t *testing.T) {
+		if val != 99.99 {
+			t.Errorf("expected val=99.99 but got %f", val)
+		}
+		if !used {
+			t.Error("expected to use default")
+		}
+	})
+}
+
+func TestConfig_Float64(t *testing.T) {
+	var (
+		cfgs map[string]*Config
+		cfg  *Config
+		val  float64
+		err  error
+	)
+
+	cfgs, err = Read(strings.NewReader(`
+    float64_1 = 123.4
+	float64_2 = -12.34
+	`))
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+
+	cfg = cfgs[""]
+	if cfg == nil {
+		t.Fatal("default config missing")
+	}
+
+	_, err = cfg.Float64("float64_0")
+	t.Run("float64_0", func(t *testing.T) {
+		if err != ErrKeyNotFound {
+			t.Error("expected 'ErrKeyNotFound'")
+		}
+	})
+
+	val, err = cfg.Float64("float64_1")
+	t.Run("float64_1", func(t *testing.T) {
+		if err != nil {
+			t.Errorf("did not expect an error: %s", err)
+		}
+		if val != 123.4 {
+			t.Errorf("expected 123.4 but got %f", val)
+		}
+	})
+
+	val, err = cfg.Float64("float64_2")
+	t.Run("float64_2", func(t *testing.T) {
+		if err != nil {
+			t.Errorf("did not expect an error: %s", err)
+		}
+		if val != -12.34 {
+			t.Errorf("expected -12.34 but got %f", val)
+		}
+	})
+}
+
+func TestConfig_Float64OrDefault(t *testing.T) {
+	var (
+		cfgs map[string]*Config
+		cfg  *Config
+		val  float64
+		used bool
+		err  error
+	)
+
+	cfgs, err = Read(strings.NewReader(`
+    float64_1 = 123.4
+	float64_2 = gamma
+	`))
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+
+	cfg = cfgs[""]
+	if cfg == nil {
+		t.Fatal("default config missing")
+	}
+
+	val, used = cfg.Float64OrDefault("float64_0", 99.99)
+	t.Run("float64_0", func(t *testing.T) {
+		if val != 99.99 {
+			t.Errorf("expected val=99.99 but got %f", val)
+		}
+		if !used {
+			t.Error("expected to use default")
+		}
+	})
+
+	val, used = cfg.Float64OrDefault("float64_1", 99.99)
+	t.Run("float64_1", func(t *testing.T) {
+		if val != 123.4 {
+			t.Errorf("expected val=123.4 but got %f", val)
+		}
+		if used {
+			t.Error("did not expect to use default")
+		}
+	})
+
+	val, used = cfg.Float64OrDefault("float64_2", 99.99)
+	t.Run("float64_2", func(t *testing.T) {
+		if val != 99.99 {
+			t.Errorf("expected val=99.99 but got %f", val)
+		}
+		if !used {
+			t.Error("expected to use default")
+		}
+	})
+}
+
+func TestConfig_Int(t *testing.T) {
+	var (
+		cfgs map[string]*Config
+		cfg  *Config
+		val  int
+		err  error
+	)
+
+	cfgs, err = Read(strings.NewReader(`
+    int_1 = 1234
+	int_2 = -1234
+	`))
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+
+	cfg = cfgs[""]
+	if cfg == nil {
+		t.Fatal("default config missing")
+	}
+
+	_, err = cfg.Int("int_0")
+	t.Run("int_0", func(t *testing.T) {
+		if err != ErrKeyNotFound {
+			t.Error("expected 'ErrKeyNotFound'")
+		}
+	})
+
+	val, err = cfg.Int("int_1")
+	t.Run("int_1", func(t *testing.T) {
+		if err != nil {
+			t.Errorf("did not expect an error: %s", err)
+		}
+		if val != 1234 {
+			t.Errorf("expected 1234 but got %d", val)
+		}
+	})
+
+	val, err = cfg.Int("int_2")
+	t.Run("int_2", func(t *testing.T) {
+		if err != nil {
+			t.Errorf("did not expect an error: %s", err)
+		}
+		if val != -1234 {
+			t.Errorf("expected -1234 but got %d", val)
+		}
+	})
+}
+
+func TestConfig_IntOrDefault(t *testing.T) {
+	var (
+		cfgs map[string]*Config
+		cfg  *Config
+		val  int
+		used bool
+		err  error
+	)
+
+	cfgs, err = Read(strings.NewReader(`
+    int_1 = 1234
+	int_2 = gamma
+	`))
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+
+	cfg = cfgs[""]
+	if cfg == nil {
+		t.Fatal("default config missing")
+	}
+
+	val, used = cfg.IntOrDefault("int_0", 9999)
+	t.Run("int_0", func(t *testing.T) {
+		if val != 9999 {
+			t.Errorf("expected val=9999 but got %d", val)
+		}
+		if !used {
+			t.Error("expected to use default")
+		}
+	})
+
+	val, used = cfg.IntOrDefault("int_1", 9999)
+	t.Run("int_1", func(t *testing.T) {
+		if val != 1234 {
+			t.Errorf("expected val=1234 but got %d", val)
+		}
+		if used {
+			t.Error("did not expect to use default")
+		}
+	})
+
+	val, used = cfg.IntOrDefault("int_2", 9999)
+	t.Run("int_2", func(t *testing.T) {
+		if val != 9999 {
+			t.Errorf("expected val=9999 but got %d", val)
+		}
+		if !used {
+			t.Error("expected to use default")
+		}
+	})
+}
+
+func TestConfig_Int32(t *testing.T) {
+	var (
+		cfgs map[string]*Config
+		cfg  *Config
+		val  int32
+		err  error
+	)
+
+	cfgs, err = Read(strings.NewReader(`
+    int32_1 = 1234
+	int32_2 = -1234
+	`))
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+
+	cfg = cfgs[""]
+	if cfg == nil {
+		t.Fatal("default config missing")
+	}
+
+	_, err = cfg.Int32("int32_0")
+	t.Run("int32_0", func(t *testing.T) {
+		if err != ErrKeyNotFound {
+			t.Error("expected 'ErrKeyNotFound'")
+		}
+	})
+
+	val, err = cfg.Int32("int32_1")
+	t.Run("int32_1", func(t *testing.T) {
+		if err != nil {
+			t.Errorf("did not expect an error: %s", err)
+		}
+		if val != 1234 {
+			t.Errorf("expected 1234 but got %d", val)
+		}
+	})
+
+	val, err = cfg.Int32("int32_2")
+	t.Run("int32_2", func(t *testing.T) {
+		if err != nil {
+			t.Errorf("did not expect an error: %s", err)
+		}
+		if val != -1234 {
+			t.Errorf("expected -1234 but got %d", val)
+		}
+	})
+}
+
+func TestConfig_Int32OrDefault(t *testing.T) {
+	var (
+		cfgs map[string]*Config
+		cfg  *Config
+		val  int32
+		used bool
+		err  error
+	)
+
+	cfgs, err = Read(strings.NewReader(`
+    int32_1 = 1234
+	int32_2 = gamma
+	`))
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+
+	cfg = cfgs[""]
+	if cfg == nil {
+		t.Fatal("default config missing")
+	}
+
+	val, used = cfg.Int32OrDefault("int32_0", 9999)
+	t.Run("int32_0", func(t *testing.T) {
+		if val != 9999 {
+			t.Errorf("expected val=9999 but got %d", val)
+		}
+		if !used {
+			t.Error("expected to use default")
+		}
+	})
+
+	val, used = cfg.Int32OrDefault("int32_1", 9999)
+	t.Run("int32_1", func(t *testing.T) {
+		if val != 1234 {
+			t.Errorf("expected val=1234 but got %d", val)
+		}
+		if used {
+			t.Error("did not expect to use default")
+		}
+	})
+
+	val, used = cfg.Int32OrDefault("int32_2", 9999)
+	t.Run("int32_2", func(t *testing.T) {
+		if val != 9999 {
+			t.Errorf("expected val=9999 but got %d", val)
+		}
+		if !used {
+			t.Error("expected to use default")
+		}
+	})
+}
+
+func TestConfig_Int64(t *testing.T) {
+	var (
+		cfgs map[string]*Config
+		cfg  *Config
+		val  int64
+		err  error
+	)
+
+	cfgs, err = Read(strings.NewReader(`
+    int64_1 = 1234
+	int64_2 = -1234
+	`))
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+
+	cfg = cfgs[""]
+	if cfg == nil {
+		t.Fatal("default config missing")
+	}
+
+	_, err = cfg.Int64("int64_0")
+	t.Run("int64_0", func(t *testing.T) {
+		if err != ErrKeyNotFound {
+			t.Error("expected 'ErrKeyNotFound'")
+		}
+	})
+
+	val, err = cfg.Int64("int64_1")
+	t.Run("int64_1", func(t *testing.T) {
+		if err != nil {
+			t.Errorf("did not expect an error: %s", err)
+		}
+		if val != 1234 {
+			t.Errorf("expected 1234 but got %d", val)
+		}
+	})
+
+	val, err = cfg.Int64("int64_2")
+	t.Run("int64_2", func(t *testing.T) {
+		if err != nil {
+			t.Errorf("did not expect an error: %s", err)
+		}
+		if val != -1234 {
+			t.Errorf("expected -1234 but got %d", val)
+		}
+	})
+}
+
+func TestConfig_Int64OrDefault(t *testing.T) {
+	var (
+		cfgs map[string]*Config
+		cfg  *Config
+		val  int64
+		used bool
+		err  error
+	)
+
+	cfgs, err = Read(strings.NewReader(`
+    int64_1 = 1234
+	int64_2 = gamma
+	`))
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+
+	cfg = cfgs[""]
+	if cfg == nil {
+		t.Fatal("default config missing")
+	}
+
+	val, used = cfg.Int64OrDefault("int64_0", 9999)
+	t.Run("int64_0", func(t *testing.T) {
+		if val != 9999 {
+			t.Errorf("expected val=9999 but got %d", val)
+		}
+		if !used {
+			t.Error("expected to use default")
+		}
+	})
+
+	val, used = cfg.Int64OrDefault("int64_1", 9999)
+	t.Run("int64_1", func(t *testing.T) {
+		if val != 1234 {
+			t.Errorf("expected val=1234 but got %d", val)
+		}
+		if used {
+			t.Error("did not expect to use default")
+		}
+	})
+
+	val, used = cfg.Int64OrDefault("int64_2", 9999)
+	t.Run("int64_2", func(t *testing.T) {
+		if val != 9999 {
+			t.Errorf("expected val=9999 but got %d", val)
+		}
+		if !used {
+			t.Error("expected to use default")
+		}
+	})
+}
+
+func TestConfig_Uint(t *testing.T) {
+	var (
+		cfgs map[string]*Config
+		cfg  *Config
+		val  uint
+		err  error
+	)
+
+	cfgs, err = Read(strings.NewReader(`
+    uint_1 = 1234
+	uint_2 = -1234
+	`))
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+
+	cfg = cfgs[""]
+	if cfg == nil {
+		t.Fatal("default config missing")
+	}
+
+	_, err = cfg.Uint("uint_0")
+	t.Run("uint_0", func(t *testing.T) {
+		if err != ErrKeyNotFound {
+			t.Error("expected 'ErrKeyNotFound'")
+		}
+	})
+
+	val, err = cfg.Uint("uint_1")
+	t.Run("uint_1", func(t *testing.T) {
+		if err != nil {
+			t.Errorf("did not expect an error: %s", err)
+		}
+		if val != 1234 {
+			t.Errorf("expected 1234 but got %d", val)
+		}
+	})
+
+	val, err = cfg.Uint("uint_2")
+	t.Run("uint_2", func(t *testing.T) {
+		if err == nil {
+			t.Error("expected an error but did not get one")
+		}
+	})
+}
+
+func TestConfig_UintOrDefault(t *testing.T) {
+	var (
+		cfgs map[string]*Config
+		cfg  *Config
+		val  uint
+		used bool
+		err  error
+	)
+
+	cfgs, err = Read(strings.NewReader(`
+    uint_1 = 1234
+	uint_2 = gamma
+	`))
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+
+	cfg = cfgs[""]
+	if cfg == nil {
+		t.Fatal("default config missing")
+	}
+
+	val, used = cfg.UintOrDefault("uint_0", 9999)
+	t.Run("uint_0", func(t *testing.T) {
+		if val != 9999 {
+			t.Errorf("expected val=9999 but got %d", val)
+		}
+		if !used {
+			t.Error("expected to use default")
+		}
+	})
+
+	val, used = cfg.UintOrDefault("uint_1", 9999)
+	t.Run("uint_1", func(t *testing.T) {
+		if val != 1234 {
+			t.Errorf("expected val=1234 but got %d", val)
+		}
+		if used {
+			t.Error("did not expect to use default")
+		}
+	})
+
+	val, used = cfg.UintOrDefault("uint_2", 9999)
+	t.Run("uint_2", func(t *testing.T) {
+		if val != 9999 {
+			t.Errorf("expected val=9999 but got %d", val)
+		}
+		if !used {
+			t.Error("expected to use default")
+		}
+	})
+}
+
+func TestConfig_Uint32(t *testing.T) {
+	var (
+		cfgs map[string]*Config
+		cfg  *Config
+		val  uint32
+		err  error
+	)
+
+	cfgs, err = Read(strings.NewReader(`
+    uint32_1 = 1234
+	uint32_2 = -1234
+	`))
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+
+	cfg = cfgs[""]
+	if cfg == nil {
+		t.Fatal("default config missing")
+	}
+
+	_, err = cfg.Uint32("uint32_0")
+	t.Run("uint32_0", func(t *testing.T) {
+		if err != ErrKeyNotFound {
+			t.Error("expected 'ErrKeyNotFound'")
+		}
+	})
+
+	val, err = cfg.Uint32("uint32_1")
+	t.Run("uint32_1", func(t *testing.T) {
+		if err != nil {
+			t.Errorf("did not expect an error: %s", err)
+		}
+		if val != 1234 {
+			t.Errorf("expected 1234 but got %d", val)
+		}
+	})
+
+	val, err = cfg.Uint32("uint32_2")
+	t.Run("uint32_2", func(t *testing.T) {
+		if err == nil {
+			t.Error("expected an error but did not get one")
+		}
+	})
+}
+
+func TestConfig_Uint32OrDefault(t *testing.T) {
+	var (
+		cfgs map[string]*Config
+		cfg  *Config
+		val  uint32
+		used bool
+		err  error
+	)
+
+	cfgs, err = Read(strings.NewReader(`
+    uint32_1 = 1234
+	uint32_2 = gamma
+	`))
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+
+	cfg = cfgs[""]
+	if cfg == nil {
+		t.Fatal("default config missing")
+	}
+
+	val, used = cfg.Uint32OrDefault("uint32_0", 9999)
+	t.Run("uint32_0", func(t *testing.T) {
+		if val != 9999 {
+			t.Errorf("expected val=9999 but got %d", val)
+		}
+		if !used {
+			t.Error("expected to use default")
+		}
+	})
+
+	val, used = cfg.Uint32OrDefault("uint32_1", 9999)
+	t.Run("uint32_1", func(t *testing.T) {
+		if val != 1234 {
+			t.Errorf("expected val=1234 but got %d", val)
+		}
+		if used {
+			t.Error("did not expect to use default")
+		}
+	})
+
+	val, used = cfg.Uint32OrDefault("uint32_2", 9999)
+	t.Run("uint32_2", func(t *testing.T) {
+		if val != 9999 {
+			t.Errorf("expected val=9999 but got %d", val)
+		}
+		if !used {
+			t.Error("expected to use default")
+		}
+	})
+}
+
+func TestConfig_Uint64(t *testing.T) {
+	var (
+		cfgs map[string]*Config
+		cfg  *Config
+		val  uint64
+		err  error
+	)
+
+	cfgs, err = Read(strings.NewReader(`
+    uint64_1 = 1234
+	uint64_2 = -1234
+	`))
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+
+	cfg = cfgs[""]
+	if cfg == nil {
+		t.Fatal("default config missing")
+	}
+
+	_, err = cfg.Uint64("uint64_0")
+	t.Run("uint64_0", func(t *testing.T) {
+		if err != ErrKeyNotFound {
+			t.Error("expected 'ErrKeyNotFound'")
+		}
+	})
+
+	val, err = cfg.Uint64("uint64_1")
+	t.Run("uint64_1", func(t *testing.T) {
+		if err != nil {
+			t.Errorf("did not expect an error: %s", err)
+		}
+		if val != 1234 {
+			t.Errorf("expected 1234 but got %d", val)
+		}
+	})
+
+	val, err = cfg.Uint64("uint64_2")
+	t.Run("uint64_2", func(t *testing.T) {
+		if err == nil {
+			t.Error("expected an error but did not get one")
+		}
+	})
+}
+
+func TestConfig_Uint64OrDefault(t *testing.T) {
+	var (
+		cfgs map[string]*Config
+		cfg  *Config
+		val  uint64
+		used bool
+		err  error
+	)
+
+	cfgs, err = Read(strings.NewReader(`
+    uint64_1 = 1234
+	uint64_2 = gamma
+	`))
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+
+	cfg = cfgs[""]
+	if cfg == nil {
+		t.Fatal("default config missing")
+	}
+
+	val, used = cfg.Uint64OrDefault("uint64_0", 9999)
+	t.Run("uint64_0", func(t *testing.T) {
+		if val != 9999 {
+			t.Errorf("expected val=9999 but got %d", val)
+		}
+		if !used {
+			t.Error("expected to use default")
+		}
+	})
+
+	val, used = cfg.Uint64OrDefault("uint64_1", 9999)
+	t.Run("uint64_1", func(t *testing.T) {
+		if val != 1234 {
+			t.Errorf("expected val=1234 but got %d", val)
+		}
+		if used {
+			t.Error("did not expect to use default")
+		}
+	})
+
+	val, used = cfg.Uint64OrDefault("uint64_2", 9999)
+	t.Run("uint64_2", func(t *testing.T) {
+		if val != 9999 {
+			t.Errorf("expected val=9999 but got %d", val)
+		}
+		if !used {
+			t.Error("expected to use default")
+		}
+	})
+}
