@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestIsComment(t *testing.T) {
@@ -1211,6 +1212,108 @@ func TestConfig_Uint64OrDefault(t *testing.T) {
 	t.Run("uint64_2", func(t *testing.T) {
 		if val != 9999 {
 			t.Errorf("expected val=9999 but got %d", val)
+		}
+		if !used {
+			t.Error("expected to use default")
+		}
+	})
+}
+
+func TestConfig_Duration(t *testing.T) {
+	var (
+		cfgs map[string]*Config
+		cfg  *Config
+		val  time.Duration
+		err  error
+	)
+
+	cfgs, err = Read(strings.NewReader(`
+    duration_1 = 3h15m22s
+	duration_2 = gamma
+	`))
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+
+	cfg = cfgs[""]
+	if cfg == nil {
+		t.Fatal("default config missing")
+	}
+
+	_, err = cfg.Duration("duration_0")
+	t.Run("duration_0", func(t *testing.T) {
+		if err != ErrKeyNotFound {
+			t.Error("expected 'ErrKeyNotFound'")
+		}
+	})
+
+	val, err = cfg.Duration("duration_1")
+	t.Run("duration_1", func(t *testing.T) {
+		if err != nil {
+			t.Errorf("did not expect an error: %s", err)
+		}
+		exp, _ := time.ParseDuration("3h15m22s")
+		if val != exp {
+			t.Errorf("expected %s but got %s", exp, val)
+		}
+	})
+
+	val, err = cfg.Duration("duration_2")
+	t.Run("duration_2", func(t *testing.T) {
+		if err == nil {
+			t.Error("expected an error but did not get one")
+		}
+	})
+}
+
+func TestConfig_DurationOrDefault(t *testing.T) {
+	var (
+		cfgs map[string]*Config
+		cfg  *Config
+		val  time.Duration
+		used bool
+		err  error
+		exp  = 55 * time.Minute
+		def  = 99 * time.Second
+	)
+
+	cfgs, err = Read(strings.NewReader(`
+    duration_1 = 55m
+	duration_2 = gamma
+	`))
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+
+	cfg = cfgs[""]
+	if cfg == nil {
+		t.Fatal("default config missing")
+	}
+
+	val, used = cfg.DurationOrDefault("duration_0", def)
+	t.Run("duration_0", func(t *testing.T) {
+		if val != def {
+			t.Errorf("expected val=%s but got %s", def, val)
+		}
+		if !used {
+			t.Error("expected to use default")
+		}
+	})
+
+	val, used = cfg.DurationOrDefault("duration_1", def)
+	t.Run("duration_1", func(t *testing.T) {
+		if val != exp {
+			t.Errorf("expected val=%s but got %s", exp, val)
+		}
+		if used {
+			t.Error("did not expect to use default")
+		}
+	})
+
+	val, used = cfg.DurationOrDefault("duration_2", def)
+	t.Run("duration_2", func(t *testing.T) {
+		if val != def {
+			t.Errorf("expected val=%s but got %s", def, val)
 		}
 		if !used {
 			t.Error("expected to use default")
