@@ -5,6 +5,9 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"path/filepath"
+	"net/url"
+	"net"
 )
 
 func TestIsComment(t *testing.T) {
@@ -1313,6 +1316,274 @@ func TestConfig_DurationOrDefault(t *testing.T) {
 	val, used = cfg.DurationOrDefault("duration_2", def)
 	t.Run("duration_2", func(t *testing.T) {
 		if val != def {
+			t.Errorf("expected val=%s but got %s", def, val)
+		}
+		if !used {
+			t.Error("expected to use default")
+		}
+	})
+}
+
+func TestConfig_URL(t *testing.T) {
+	var (
+		cfgs map[string]*Config
+		cfg  *Config
+		val  *url.URL
+		err  error
+	)
+
+	cfgs, err = Read(strings.NewReader(`
+    url_1 = http://www.jgpruitt.com/home.html
+	`))
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+
+	cfg = cfgs[""]
+	if cfg == nil {
+		t.Fatal("default config missing")
+	}
+
+	_, err = cfg.URL("url_0")
+	t.Run("url_0", func(t *testing.T) {
+		if err != ErrKeyNotFound {
+			t.Error("expected 'ErrKeyNotFound'")
+		}
+	})
+
+	val, err = cfg.URL("url_1")
+	t.Run("url_1", func(t *testing.T) {
+		if err != nil {
+			t.Errorf("did not expect an error: %s", err)
+		}
+		exp, _ := url.Parse(`http://www.jgpruitt.com/home.html`)
+		if val.String() != exp.String() {
+			t.Errorf("expected %s but got %s", exp, val)
+		}
+	})
+}
+
+func TestConfig_URLOrDefault(t *testing.T) {
+	var (
+		cfgs map[string]*Config
+		cfg  *Config
+		val  *url.URL
+		used bool
+		err  error
+		exp, _  = url.Parse(`http://www.jgpruitt.com/exp.html`)
+		def, _  = url.Parse(`http://www.jgpruitt.com/def.html`)
+	)
+
+	cfgs, err = Read(strings.NewReader(`
+    url_1 = http://www.jgpruitt.com/exp.html
+	`))
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+
+	cfg = cfgs[""]
+	if cfg == nil {
+		t.Fatal("default config missing")
+	}
+
+	val, used = cfg.URLOrDefault("url_0", def)
+	t.Run("url_0", func(t *testing.T) {
+		if val.String() != def.String() {
+			t.Errorf("expected val=%s but got %s", def, val)
+		}
+		if !used {
+			t.Error("expected to use default")
+		}
+	})
+
+	val, used = cfg.URLOrDefault("url_1", def)
+	t.Run("url_1", func(t *testing.T) {
+		if val.String() != exp.String() {
+			t.Errorf("expected val=%s but got %s", exp, val)
+		}
+		if used {
+			t.Error("did not expect to use default")
+		}
+	})
+}
+
+func TestConfig_FilePath(t *testing.T) {
+	var (
+		cfgs map[string]*Config
+		cfg  *Config
+		val  string
+		err  error
+	)
+
+	cfgs, err = Read(strings.NewReader(`
+    filepath_1 = /home/john/notes/temp.txt
+	`))
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+
+	cfg = cfgs[""]
+	if cfg == nil {
+		t.Fatal("default config missing")
+	}
+
+	_, err = cfg.FilePath("filepath_0")
+	t.Run("filepath_0", func(t *testing.T) {
+		if err != ErrKeyNotFound {
+			t.Error("expected 'ErrKeyNotFound'")
+		}
+	})
+
+	val, err = cfg.FilePath("filepath_1")
+	t.Run("filepath_1", func(t *testing.T) {
+		if err != nil {
+			t.Errorf("did not expect an error: %s", err)
+		}
+		exp := filepath.Clean(`/home/john/notes/temp.txt`)
+		if val != exp {
+			t.Errorf("expected %s but got %s", exp, val)
+		}
+	})
+}
+
+func TestConfig_FilePathOrDefault(t *testing.T) {
+	var (
+		cfgs map[string]*Config
+		cfg  *Config
+		val  string
+		used bool
+		err  error
+		exp  = filepath.Clean(`/home/john/exp.txt`)
+		def  = filepath.Clean(`/home/john/def.txt`)
+	)
+
+	cfgs, err = Read(strings.NewReader(`
+    filepath_1 = /home/john/exp.txt
+	`))
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+
+	cfg = cfgs[""]
+	if cfg == nil {
+		t.Fatal("default config missing")
+	}
+
+	val, used = cfg.FilePathOrDefault("filepath_0", def)
+	t.Run("filepath_0", func(t *testing.T) {
+		if val != def {
+			t.Errorf("expected val=%s but got %s", def, val)
+		}
+		if !used {
+			t.Error("expected to use default")
+		}
+	})
+
+	val, used = cfg.FilePathOrDefault("filepath_1", def)
+	t.Run("filepath_1", func(t *testing.T) {
+		if val != exp {
+			t.Errorf("expected val=%s but got %s", exp, val)
+		}
+		if used {
+			t.Error("did not expect to use default")
+		}
+	})
+}
+
+func TestConfig_IP(t *testing.T) {
+	var (
+		cfgs map[string]*Config
+		cfg  *Config
+		val  net.IP
+		err  error
+	)
+
+	cfgs, err = Read(strings.NewReader(`
+    ip_1 = 192.168.1.1
+	ip_2 = gamma
+	`))
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+
+	cfg = cfgs[""]
+	if cfg == nil {
+		t.Fatal("default config missing")
+	}
+
+	_, err = cfg.Duration("ip_0")
+	t.Run("ip_0", func(t *testing.T) {
+		if err != ErrKeyNotFound {
+			t.Error("expected 'ErrKeyNotFound'")
+		}
+	})
+
+	val, err = cfg.IP("ip_1")
+	t.Run("ip_1", func(t *testing.T) {
+		if err != nil {
+			t.Errorf("did not expect an error: %s", err)
+		}
+		exp := net.ParseIP("192.168.1.1")
+		if !exp.Equal(val) {
+			t.Errorf("expected %s but got %s", exp, val)
+		}
+	})
+
+	val, err = cfg.IP("ip_2")
+	t.Run("ip_2", func(t *testing.T) {
+		if err == nil {
+			t.Error("expected an error but did not get one")
+		}
+	})
+}
+
+func TestConfig_IPOrDefault(t *testing.T) {
+	var (
+		cfgs map[string]*Config
+		cfg  *Config
+		val  net.IP
+		used bool
+		err  error
+		exp  = net.ParseIP("192.168.1.1")
+		def  = net.ParseIP("192.168.1.2")
+	)
+
+	cfgs, err = Read(strings.NewReader(`
+    ip_1 = 192.168.1.1
+	ip_2 = gamma
+	`))
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+
+	cfg = cfgs[""]
+	if cfg == nil {
+		t.Fatal("default config missing")
+	}
+
+	val, used = cfg.IPOrDefault("ip_0", def)
+	t.Run("ip_0", func(t *testing.T) {
+		if !def.Equal(val) {
+			t.Errorf("expected val=%s but got %s", def, val)
+		}
+		if !used {
+			t.Error("expected to use default")
+		}
+	})
+
+	val, used = cfg.IPOrDefault("ip_1", def)
+	t.Run("ip_1", func(t *testing.T) {
+		if !exp.Equal(val) {
+			t.Errorf("expected val=%s but got %s", exp, val)
+		}
+		if used {
+			t.Error("did not expect to use default")
+		}
+	})
+
+	val, used = cfg.IPOrDefault("ip_2", def)
+	t.Run("ip_2", func(t *testing.T) {
+		if !def.Equal(val) {
 			t.Errorf("expected val=%s but got %s", def, val)
 		}
 		if !used {
