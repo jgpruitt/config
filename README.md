@@ -1,7 +1,15 @@
 # config
+
+[![GoDoc](https://godoc.org/github.com/jgpruitt/config?status.svg)](https://godoc.org/github.com/jgpruitt/config)
 [![Go Report Card](https://goreportcard.com/badge/github.com/jgpruitt/config)](https://goreportcard.com/report/github.com/jgpruitt/config)
 
-A Go library for reading configuration files.
+A Go library for reading configuration files with simple, flexible syntax.
+
+## Installation
+
+```sh
+go get -u github.com/jgpruitt/config
+```
 
 ## Features
 
@@ -56,3 +64,54 @@ database:
 
 Whitespace around configuration names, keys, and values is ignored. So, uses spaces and tabs to your heart's content
 to make your configuration more readable.
+
+## Example
+
+```go
+func ExampleRead() {
+	var file = `
+
+		number = 1234
+		every = 3m20s
+
+		database:
+			username = admin
+			port=5432
+
+		log:
+			path=../out/log.txt
+			level=fatal
+	`
+	cfgs, _ := config.Read(strings.NewReader(file))
+
+	// the "default" config contains key/values occurring before
+	// the first named config appears
+	def := cfgs[""]
+
+	number, _ := def.IntOrDefault("number", 42)
+	fmt.Println("number =", number)
+
+	every, _ := def.DurationOrDefault("every", time.Minute * 9)
+	fmt.Println("every =", every)
+
+	db := cfgs["database"]
+
+	username, _ := db.StringOrDefault("username", "not-admin")
+	fmt.Println("username =", username)
+
+	port, _ := db.IntOrDefault("port", 8086)
+	fmt.Println("port =", port)
+
+	// easily use a default in the case of a missing key/value pair
+	ip, _ := db.IPOrDefault("ip", net.ParseIP("127.0.0.1"))
+	fmt.Println("ip =", ip)
+
+	log := cfgs["log"]
+
+	path, _ := log.FilePathOrDefault("path", "./log.out")
+	fmt.Println("path =", path)
+
+	level, _ := log.StringOrDefault("level", "debug")
+	fmt.Println("level =", level)
+}
+```
