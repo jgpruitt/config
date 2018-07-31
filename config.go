@@ -20,7 +20,7 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
 
-// config reads configuration files using a simple, flexible syntax
+// Package config reads configuration files using a simple, flexible syntax
 package config
 
 import (
