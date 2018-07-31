@@ -355,7 +355,7 @@ func (c *Config) URLOrDefault(key string, def *url.URL) (val *url.URL, used bool
 }
 
 // FilePath returns the value associated with the given key as a string that
-// has been interpretted as a file path and cleaned.
+// has been interpreted as a file path and cleaned.
 // If the key does not exist, ErrKeyNotFound is returned.
 // An error is returned if the value cannot be parsed into a *url.URL.
 func (c *Config) FilePath(key string) (val string, err error) {
@@ -367,7 +367,7 @@ func (c *Config) FilePath(key string) (val string, err error) {
 }
 
 // FilePathOrDefault returns the value associated with the given key as a string that
-// has been interpretted as a file path and cleaned.
+// has been interpreted as a file path and cleaned.
 // If the key does not exist or cannot be parsed appropriately, the default value "def" is returned.
 // "used" will be true if the default value was used.
 func (c *Config) FilePathOrDefault(key string, def string) (val string, used bool) {
