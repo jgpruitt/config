@@ -358,7 +358,6 @@ func (c *Config) URLOrDefault(key string, def *url.URL) (val *url.URL, used bool
 // FilePath returns the value associated with the given key as a string that
 // has been interpreted as a file path and cleaned.
 // If the key does not exist, ErrKeyNotFound is returned.
-// An error is returned if the value cannot be parsed into a *url.URL.
 func (c *Config) FilePath(key string) (val string, err error) {
 	str, err := c.String(key)
 	if err != nil {
@@ -378,6 +377,46 @@ func (c *Config) FilePathOrDefault(key string, def string) (val string, used boo
 		return def, true
 	}
 	return val, false
+}
+
+// TimeOfDay returns the value associated with the given key as a string that
+// has been interpreted as a time of day in HH24:MM format.
+// If the key does not exist, ErrKeyNotFound is returned.
+// An error is returned if the value cannot be parsed into valid hour and minute components.
+// Hour must be greater than or equal to 0 and less than or equal to 23.
+// Minute must be greater than or equal to 0 and less than or equal to 59.
+func (c *Config) TimeOfDay(key string) (hour int, minute int, err error) {
+	str, err := c.String(key)
+	if err != nil {
+		return -1, -1, err
+	}
+	if n, err := fmt.Sscanf(str, "%d:%d", &hour, &minute); n != 2 {
+		return -1, -1, errors.New("invalid format")
+	} else if err != nil {
+		return -1, -1, err
+	}
+	if hour < 0 || 23 < hour {
+		return -1, -1, errors.New("hour component must be greater than or equal to 0 and less than or equal to 23")
+	}
+	if minute < 0 || 59 < minute {
+		return -1, -1, errors.New("minute component must be greater than or equal to 0 and less than or equal to 59")
+	}
+	return hour, minute, nil
+}
+
+// TimeOfDay returns the value associated with the given key as a string that
+// has been interpreted as a time of day in HH24:MM format.
+// Hour must be greater than or equal to 0 and less than or equal to 23.
+// Minute must be greater than or equal to 0 and less than or equal to 59.
+// If the key does not exist or cannot be parsed appropriately, the default values "defHour" and "defMinute" are returned.
+// "used" will be true if the default value was used.
+func (c *Config) TimeOfDayOrDefault(key string, defHour, defMinute int) (hour, minute int, used bool) {
+	var err error
+	hour, minute, err = c.TimeOfDay(key)
+	if err != nil {
+		return defHour, defMinute, true
+	}
+	return hour, minute, false
 }
 
 // IP returns the value associated with the given key as a net.IP.
@@ -431,7 +470,7 @@ func isName(line string) bool {
 
 func parseName(line string) string {
 	return strings.TrimRightFunc(line, func(r rune) bool {
-		return ':' == r || unicode.IsSpace(r)
+		return r == ':' || unicode.IsSpace(r)
 	})
 }
 

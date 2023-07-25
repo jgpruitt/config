@@ -2,12 +2,12 @@ package config
 
 import (
 	"fmt"
+	"net"
+	"net/url"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
-	"path/filepath"
-	"net/url"
-	"net"
 )
 
 func TestIsComment(t *testing.T) {
@@ -1365,13 +1365,13 @@ func TestConfig_URL(t *testing.T) {
 
 func TestConfig_URLOrDefault(t *testing.T) {
 	var (
-		cfgs map[string]*Config
-		cfg  *Config
-		val  *url.URL
-		used bool
-		err  error
-		exp, _  = url.Parse(`http://www.jgpruitt.com/exp.html`)
-		def, _  = url.Parse(`http://www.jgpruitt.com/def.html`)
+		cfgs   map[string]*Config
+		cfg    *Config
+		val    *url.URL
+		used   bool
+		err    error
+		exp, _ = url.Parse(`http://www.jgpruitt.com/exp.html`)
+		def, _ = url.Parse(`http://www.jgpruitt.com/def.html`)
 	)
 
 	cfgs, err = Read(strings.NewReader(`
@@ -1486,6 +1486,138 @@ func TestConfig_FilePathOrDefault(t *testing.T) {
 		}
 		if used {
 			t.Error("did not expect to use default")
+		}
+	})
+}
+
+func TestConfig_TimeOfDay(t *testing.T) {
+	var (
+		cfgs         map[string]*Config
+		cfg          *Config
+		hour, minute int
+		err          error
+	)
+	cfgs, err = Read(strings.NewReader(`
+	timeofday_1=11:26
+	timeofday_2=25:01
+	timeofday_3=13:70
+	timeofday_4=foxtrot
+	`))
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+
+	cfg = cfgs[""]
+	if cfg == nil {
+		t.Fatal("default config missing")
+	}
+
+	_, _, err = cfg.TimeOfDay("timeofday_0")
+	t.Run("timeofday_0", func(t *testing.T) {
+		if err != ErrKeyNotFound {
+			t.Error("expected 'ErrKeyNotFound")
+		}
+	})
+
+	expHour := 11
+	expMinute := 26
+	hour, minute, err = cfg.TimeOfDay("timeofday_1")
+	t.Run("timeofday_1", func(t *testing.T) {
+		if err != nil {
+			t.Errorf("did not expect an error: %s", err)
+		}
+		if hour != expHour {
+			t.Errorf("expected %v but got %v", expHour, hour)
+		}
+		if minute != expMinute {
+			t.Errorf("expected %v but got %v", expMinute, minute)
+		}
+	})
+
+	_, _, err = cfg.TimeOfDay("timeofday_2")
+	t.Run("timeofday_2", func(t *testing.T) {
+		if err == nil {
+			t.Error("expected error")
+		}
+	})
+
+	_, _, err = cfg.TimeOfDay("timeofday_3")
+	t.Run("timeofday_3", func(t *testing.T) {
+		if err == nil {
+			t.Error("expected error")
+		}
+	})
+
+	_, _, err = cfg.TimeOfDay("timeofday_4")
+	t.Run("timeofday_4", func(t *testing.T) {
+		if err == nil {
+			t.Error("expected error")
+		}
+	})
+}
+
+func TestConfig_TimeOfDayOrDefault(t *testing.T) {
+	var (
+		cfgs         map[string]*Config
+		cfg          *Config
+		hour, minute int
+		used         bool
+		err          error
+		expHour      = 0
+		expMinute    = 0
+		defHour      = 0
+		defMinute    = 0
+	)
+
+	cfgs, err = Read(strings.NewReader(`
+	timeofday_1=00:00
+	timeofday_2=foxtrot
+	`))
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+
+	cfg = cfgs[""]
+	if cfg == nil {
+		t.Fatal("default config missing")
+	}
+
+	hour, minute, used = cfg.TimeOfDayOrDefault("timeofday_0", defHour, defMinute)
+	t.Run("timeofday_0", func(t *testing.T) {
+		if hour != expHour {
+			t.Errorf("expected hour=%v but got %v", defHour, hour)
+		}
+		if minute != expMinute {
+			t.Errorf("expected minute=%v but got %v", defMinute, minute)
+		}
+		if !used {
+			t.Error("expected to use default")
+		}
+	})
+
+	hour, minute, used = cfg.TimeOfDayOrDefault("timeofday_1", defHour, defMinute)
+	t.Run("timeofday_1", func(t *testing.T) {
+		if hour != expHour {
+			t.Errorf("expected hour=%v but got %v", expHour, hour)
+		}
+		if minute != expMinute {
+			t.Errorf("expected minute=%v but got %v", expMinute, time.Minute)
+		}
+		if used {
+			t.Error("did not expect to use defualt")
+		}
+	})
+
+	hour, minute, used = cfg.TimeOfDayOrDefault("timeofday_2", defHour, defMinute)
+	t.Run("timeofday_2", func(t *testing.T) {
+		if hour != expHour {
+			t.Errorf("expected hour=%v but got %v", expHour, hour)
+		}
+		if minute != expMinute {
+			t.Errorf("expected minute=%v but got %v", expMinute, minute)
+		}
+		if !used {
+			t.Error("expected to use default")
 		}
 	})
 }
