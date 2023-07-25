@@ -31,6 +31,7 @@ go get -u github.com/jgpruitt/config
     * *url.URL
     * file path
     * net.IP
+	* time of day (as `hour, minute int`)
 * Easily substitute defaults for missing keys or incorrectly specified values
 * Heavily unit tested
 
